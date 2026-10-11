@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens (space-separated RGB so Tailwind opacity modifiers work).
+ * Light: soft slate-50 page on white cards, near-black text (~17:1).
+ * Dark: blue-tinted charcoal (not pure black) with off-white text (~14:1)
+ * to limit glare/halation; accents are lightened to keep >= 4.5:1.
+ */
+:root {
+  color-scheme: light;
+  --surface: 255 255 255;
+  --slate-50: 248 250 252;
+  --slate-100: 241 245 249;
+  --slate-200: 226 232 240;
+  --slate-300: 203 213 225;
+  --slate-400: 100 116 139; /* placeholders, line numbers: >= 4.5:1 on white */
+  --slate-500: 84 98 120;
+  --slate-600: 71 85 105;
+  --slate-700: 51 65 85;
+  --slate-800: 30 41 59;
+  --slate-900: 15 23 42;
+  --brand-500: 99 102 241;
+  --brand-600: 79 70 229;
+  --brand-link: 79 70 229;
+  --danger: 220 38 38;
+  --danger-hover: 239 68 68;
+  --red-50: 254 242 242;
+  --red-100: 254 226 226;
+  --red-200: 254 202 202;
+  --red-500: 239 68 68;
+  --red-600: 220 38 38;
+  --red-700: 185 28 28;
+  --amber-50: 255 251 235;
+  --amber-500: 245 158 11;
+  --amber-700: 180 83 9;
+  --emerald-50: 236 253 245;
+  --emerald-500: 16 185 129;
+  --emerald-700: 4 120 87;
+
+  --hl-comment: 100 116 139;
+  --hl-keyword: 207 34 46;
+  --hl-string: 10 48 105;
+  --hl-number: 5 80 174;
+  --hl-title: 130 80 223;
+  --hl-attr: 17 99 41;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: 22 27 38;
+  --slate-50: 15 19 28; /* page background */
+  --slate-100: 33 40 54; /* hover / subtle fills */
+  --slate-200: 46 54 70; /* borders */
+  --slate-300: 62 72 91; /* input borders */
+  --slate-400: 138 150 170;
+  --slate-500: 156 167 186;
+  --slate-600: 186 195 210;
+  --slate-700: 205 213 225;
+  --slate-800: 226 232 240;
+  --slate-900: 241 245 249;
+  --brand-500: 99 102 241; /* hover fill; white label 4.5:1 */
+  --brand-600: 79 70 229; /* white label 6.3:1 */
+  --brand-link: 165 180 252; /* links on charcoal */
+  --danger: 205 50 50;
+  --danger-hover: 225 70 70;
+  --red-50: 69 26 30;
+  --red-100: 95 32 38;
+  --red-200: 127 45 52;
+  --red-500: 248 113 113;
+  --red-600: 248 113 113;
+  --red-700: 252 165 165;
+  --amber-50: 63 45 15;
+  --amber-500: 245 158 11;
+  --amber-700: 252 211 77;
+  --emerald-50: 15 55 42;
+  --emerald-500: 52 211 153;
+  --emerald-700: 110 231 183;
+
+  --hl-comment: 139 148 158;
+  --hl-keyword: 255 123 114;
+  --hl-string: 165 214 255;
+  --hl-number: 121 192 255;
+  --hl-title: 210 168 255;
+  --hl-attr: 126 231 135;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::selection {
+  background: rgb(var(--brand-500) / 0.3);
+}
+
+/* Syntax highlighting: theme-aware replacement for highlight.js/styles/github.css */
+.hljs { color: rgb(var(--slate-800)); }
+.hljs-comment, .hljs-quote { color: rgb(var(--hl-comment)); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-doctag, .hljs-deletion { color: rgb(var(--hl-keyword)); }
+.hljs-string, .hljs-regexp, .hljs-meta .hljs-string { color: rgb(var(--hl-string)); }
+.hljs-number, .hljs-literal, .hljs-variable, .hljs-template-variable, .hljs-built_in, .hljs-type { color: rgb(var(--hl-number)); }
+.hljs-title, .hljs-section { color: rgb(var(--hl-title)); }
+.hljs-attr, .hljs-attribute, .hljs-name, .hljs-selector-class, .hljs-selector-id, .hljs-symbol, .hljs-bullet, .hljs-addition { color: rgb(var(--hl-attr)); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }

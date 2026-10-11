@@ -1,0 +1,1099 @@
+{
+ "existing_project": "DevDocs",
+ "path_prefix": "DevDocs/",
+ "exclude": [
+  "backend/eval/dataset.json",
+  "backend/eval/dataset_devdocs.json",
+  "backend/eval/dataset_devdocs_holdout.json"
+ ],
+ "frozen": {
+  "date": "2026-10-11",
+  "note": "Held-out set. Settings were frozen BEFORE the first run on this file and must not be tuned on it.",
+  "gate_vector_threshold": 0.82,
+  "relative_cutoff": 0.04,
+  "bm25_protect": 2,
+  "rerank_top_n": 0,
+  "corpus": "DevDocs project snapshot as ingested before this change (104 files, 536 chunks); unchanged files only are asked about"
+ },
+ "questions": [
+  {
+   "q": "which folders get skipped when i upload a project?",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "backend/app/ingestion/upload_rules.json"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/rules.py",
+    "frontend/src/lib/ignore.ts",
+    "frontend/src/lib/dropFolder.ts"
+   ]
+  },
+  {
+   "q": "whats the biggest single file size allowed",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "backend/app/ingestion/upload_rules.json"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/rules.py",
+    "frontend/src/lib/ignore.ts"
+   ]
+  },
+  {
+   "q": "is there a cap on how much total data i can upload at once?",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "backend/app/ingestion/upload_rules.json"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/rules.py",
+    "frontend/src/lib/ignore.ts"
+   ]
+  },
+  {
+   "q": "can i upload .docx or .toml files, what extensions are supported",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "backend/app/ingestion/upload_rules.json"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/rules.py"
+   ]
+  },
+  {
+   "q": "why would an upload path be rejected as invalid",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "backend/app/ingestion/rules.py"
+   ],
+   "acceptable": [
+    "backend/app/api/files.py"
+   ]
+  },
+  {
+   "q": "how does it stop a path like ../../secret from escaping the project folder",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "backend/app/ingestion/rules.py"
+   ],
+   "acceptable": [
+    "backend/app/api/files.py"
+   ]
+  },
+  {
+   "q": "how does a file get labelled as source vs doc vs other",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "backend/app/ingestion/rules.py",
+    "backend/app/ingestion/upload_rules.json"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "when i drop a folder does node_modules get walked into or not",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "frontend/src/lib/dropFolder.ts"
+   ],
+   "acceptable": [
+    "frontend/src/lib/ignore.ts"
+   ]
+  },
+  {
+   "q": "how does the browser decide which files to skip before uploading",
+   "kind": "answerable",
+   "tag": "rules",
+   "expected": [
+    "frontend/src/lib/ignore.ts"
+   ],
+   "acceptable": [
+    "frontend/src/lib/dropFolder.ts"
+   ]
+  },
+  {
+   "q": "what hashing algorithm is used to see if a file changed",
+   "kind": "answerable",
+   "tag": "change",
+   "expected": [
+    "backend/app/ingestion/hashing.py"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/change_detection.py",
+    "backend/app/api/files.py",
+    "backend/app/models.py"
+   ]
+  },
+  {
+   "q": "does hashing read the whole file into memory?",
+   "kind": "answerable",
+   "tag": "change",
+   "expected": [
+    "backend/app/ingestion/hashing.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what happens if i rename a file and upload again",
+   "kind": "answerable",
+   "tag": "change",
+   "expected": [
+    "backend/app/ingestion/change_detection.py"
+   ],
+   "acceptable": [
+    "backend/app/api/files.py"
+   ]
+  },
+  {
+   "q": "how does it work out which files are modified vs unchanged",
+   "kind": "answerable",
+   "tag": "change",
+   "expected": [
+    "backend/app/ingestion/change_detection.py"
+   ],
+   "acceptable": [
+    "backend/app/api/files.py"
+   ]
+  },
+  {
+   "q": "what if a stored file has no hash, is it treated as modified",
+   "kind": "answerable",
+   "tag": "change",
+   "expected": [
+    "backend/app/ingestion/change_detection.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how is the project status worked out",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/status.py"
+   ],
+   "acceptable": [
+    "backend/app/api/projects.py",
+    "backend/app/ingestion/worker.py"
+   ]
+  },
+  {
+   "q": "when does a project show up as failed",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/status.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "when does last_ingested_at get set",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/status.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what runs the background ingestion and does it do many projects at once",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/worker.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what happens to files stuck in processing after the server crashes",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/worker.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "in what order is a file written, postgres elasticsearch or marked ready?",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/worker.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "does one broken file make the whole project ingestion fail?",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/worker.py"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/status.py"
+   ]
+  },
+  {
+   "q": "what are the states a file goes through",
+   "kind": "answerable",
+   "tag": "worker",
+   "expected": [
+    "backend/app/ingestion/worker.py"
+   ],
+   "acceptable": [
+    "backend/app/models.py",
+    "backend/app/ingestion/status.py"
+   ]
+  },
+  {
+   "q": "how are python files cut into chunks",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/parsers/code.py"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/chunking.py"
+   ]
+  },
+  {
+   "q": "how does markdown get split, by what",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/parsers/markdown.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how are pdfs parsed, one chunk per what",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/parsers/pdf.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how do csv files get split up into chunks",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/parsers/structured.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what happens to tables inside word documents",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/parsers/docx.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what happens to a chunk thats too big",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/chunking.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how are tokens counted for chunks",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/chunking.py"
+   ],
+   "acceptable": [
+    "backend/app/providers/rate_limit.py"
+   ]
+  },
+  {
+   "q": "how are txt and xml files split",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/parsers/text.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what do all the parsers hand back, a common format?",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/parsers/base.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "why do chunks have line numbers",
+   "kind": "answerable",
+   "tag": "parse",
+   "expected": [
+    "backend/app/ingestion/chunking.py"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/parsers/base.py",
+    "backend/app/models.py"
+   ]
+  },
+  {
+   "q": "how do we avoid hitting the gemini rate limit",
+   "kind": "answerable",
+   "tag": "provider",
+   "expected": [
+    "backend/app/providers/rate_limit.py"
+   ],
+   "acceptable": [
+    "backend/app/providers/embeddings.py",
+    "backend/app/config.py"
+   ]
+  },
+  {
+   "q": "what is a sliding window limiter here",
+   "kind": "answerable",
+   "tag": "provider",
+   "expected": [
+    "backend/app/providers/rate_limit.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "which task types are used when embedding chunks vs questions",
+   "kind": "answerable",
+   "tag": "provider",
+   "expected": [
+    "backend/app/providers/embeddings.py"
+   ],
+   "acceptable": [
+    "CLAUDE.md",
+    "scripts/check_providers.py"
+   ]
+  },
+  {
+   "q": "what happens when gemini answers with a 429",
+   "kind": "answerable",
+   "tag": "provider",
+   "expected": [
+    "backend/app/providers/embeddings.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how is the embedding fingerprint built",
+   "kind": "answerable",
+   "tag": "provider",
+   "expected": [
+    "backend/app/providers/embeddings.py"
+   ],
+   "acceptable": [
+    "backend/app/search/index_manager.py"
+   ]
+  },
+  {
+   "q": "what are orphaned docs in elasticsearch and how do i clean them",
+   "kind": "answerable",
+   "tag": "search",
+   "expected": [
+    "backend/app/search/reconcile.py"
+   ],
+   "acceptable": [
+    "backend/app/api/dev.py",
+    "frontend/src/components/explorer/ESInspector.tsx"
+   ]
+  },
+  {
+   "q": "how do chunks get written into elasticsearch",
+   "kind": "answerable",
+   "tag": "search",
+   "expected": [
+    "backend/app/search/indexer.py"
+   ],
+   "acceptable": [
+    "backend/app/ingestion/worker.py"
+   ]
+  },
+  {
+   "q": "how do i remove every indexed doc of one file",
+   "kind": "answerable",
+   "tag": "search",
+   "expected": [
+    "backend/app/search/indexer.py"
+   ],
+   "acceptable": [
+    "backend/app/api/files.py"
+   ]
+  },
+  {
+   "q": "which analyzer splits camelCase identifiers into parts",
+   "kind": "answerable",
+   "tag": "search",
+   "expected": [
+    "backend/app/search/index_manager.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how are elasticsearch index names built",
+   "kind": "answerable",
+   "tag": "search",
+   "expected": [
+    "backend/app/search/index_manager.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "which endpoint lists the files of a project",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/api/files.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what does the server answer when the file for a citation is gone",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/api/files.py"
+   ],
+   "acceptable": [
+    "frontend/src/components/viewer/FloatingFileViewer.tsx"
+   ]
+  },
+  {
+   "q": "how do i retry a failed file",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/api/files.py"
+   ],
+   "acceptable": [
+    "frontend/src/components/explorer/FilesTab.tsx"
+   ]
+  },
+  {
+   "q": "how do i rename or delete a project through the api",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/api/projects.py"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what numbers does the overview endpoint return",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/api/projects.py"
+   ],
+   "acceptable": [
+    "frontend/src/components/explorer/OverviewTab.tsx"
+   ]
+  },
+  {
+   "q": "how does the health check work",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/main.py"
+   ],
+   "acceptable": [
+    "backend/app/db.py",
+    "backend/app/search/es_client.py"
+   ]
+  },
+  {
+   "q": "where does the global ingestion indicator get its data",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/api/meta.py"
+   ],
+   "acceptable": [
+    "frontend/src/components/GlobalIngestionIndicator.tsx"
+   ]
+  },
+  {
+   "q": "how can the frontend tell if dev mode is on",
+   "kind": "answerable",
+   "tag": "api",
+   "expected": [
+    "backend/app/api/meta.py"
+   ],
+   "acceptable": [
+    "backend/app/config.py"
+   ]
+  },
+  {
+   "q": "what ports do postgres and elasticsearch run on",
+   "kind": "answerable",
+   "tag": "infra",
+   "expected": [
+    "docker-compose.yml"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how much memory is elasticsearch given",
+   "kind": "answerable",
+   "tag": "infra",
+   "expected": [
+    "docker-compose.yml"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "which postgres version do we run",
+   "kind": "answerable",
+   "tag": "infra",
+   "expected": [
+    "docker-compose.yml"
+   ],
+   "acceptable": [
+    "CLAUDE.md"
+   ]
+  },
+  {
+   "q": "is elasticsearch security switched on for local dev",
+   "kind": "answerable",
+   "tag": "infra",
+   "expected": [
+    "docker-compose.yml"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how do i start the backend and the frontend locally",
+   "kind": "answerable",
+   "tag": "infra",
+   "expected": [
+    "CLAUDE.md"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how do i run the backend tests",
+   "kind": "answerable",
+   "tag": "infra",
+   "expected": [
+    "CLAUDE.md"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how do i check my gemini and groq keys actually work",
+   "kind": "answerable",
+   "tag": "infra",
+   "expected": [
+    "scripts/check_providers.py"
+   ],
+   "acceptable": [
+    "CLAUDE.md"
+   ]
+  },
+  {
+   "q": "what columns does the files table have",
+   "kind": "answerable",
+   "tag": "model",
+   "expected": [
+    "backend/app/models.py"
+   ],
+   "acceptable": [
+    "backend/alembic/versions/0003_files.py"
+   ]
+  },
+  {
+   "q": "which table holds the chunks and what is in it",
+   "kind": "answerable",
+   "tag": "model",
+   "expected": [
+    "backend/app/models.py"
+   ],
+   "acceptable": [
+    "backend/alembic/versions/0004_chunks.py"
+   ]
+  },
+  {
+   "q": "what does the projects table look like",
+   "kind": "answerable",
+   "tag": "model",
+   "expected": [
+    "backend/app/models.py"
+   ],
+   "acceptable": [
+    "backend/alembic/versions/0002_projects.py"
+   ]
+  },
+  {
+   "q": "how does the viewer decide how to show a file",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/viewer/FloatingFileViewer.tsx"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "what does the viewer say if the file doesnt exist anymore",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/viewer/FloatingFileViewer.tsx"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how are pdf files rendered in the browser",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/viewer/PdfRenderer.tsx"
+   ],
+   "acceptable": [
+    "frontend/src/components/viewer/FloatingFileViewer.tsx"
+   ]
+  },
+  {
+   "q": "how does the dark mode choice get remembered",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/lib/theme.ts"
+   ],
+   "acceptable": [
+    "frontend/src/components/ThemeToggle.tsx"
+   ]
+  },
+  {
+   "q": "how does the upload report show what changed",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/explorer/UploadReportView.tsx"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how can i look at the raw embedding numbers of a chunk",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/explorer/VectorPeek.tsx"
+   ],
+   "acceptable": [
+    "backend/app/api/dev.py"
+   ]
+  },
+  {
+   "q": "what does the overview tab show",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/explorer/OverviewTab.tsx"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how is the file tree built from a flat list of paths",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/lib/tree.ts"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "whats on the settings page",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/pages/SettingsPage.tsx"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how long is the splash screen shown",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/Splash.tsx"
+   ],
+   "acceptable": []
+  },
+  {
+   "q": "how are csv files displayed in the viewer",
+   "kind": "answerable",
+   "tag": "frontend",
+   "expected": [
+    "frontend/src/components/viewer/TableRenderer.tsx"
+   ],
+   "acceptable": [
+    "frontend/src/components/viewer/FloatingFileViewer.tsx"
+   ]
+  },
+  {
+   "q": "who won the cricket world cup in 2011",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i make a good masala dosa",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "whats the capital of australia",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "explain photosynthesis simply",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "best time of year to visit kerala",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how many players are in a football team",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "who painted the mona lisa",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what is inflation in economics",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do vaccines work",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "recommend a good sci-fi novel",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how far is the moon from earth",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what should i cook for dinner tonight",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i train for a marathon",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "whats the tallest mountain in the world",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "translate good morning to french",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how does a mortgage work",
+   "kind": "offtopic",
+   "tag": "world",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i reverse a string in javascript",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "difference between a list and a tuple in python",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what is big o notation",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i center a div with css",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "explain recursion with an example",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what is the difference between git merge and rebase",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i write a sql join",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what does async await do in js",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i sort a dictionary by value in python",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what is a closure",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how to undo the last git commit",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what is dependency injection",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "difference between tcp and udp",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i read a file line by line in go",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what is a race condition",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do i parse json in java",
+   "kind": "offtopic",
+   "tag": "generic-code",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how is the kubernetes deployment configured",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "where are the terraform files for the cloud setup",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how does the graphql schema get generated",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do users log in with oauth",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how are stripe payments handled",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "which celery tasks run in the background",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how is rabbitmq used for the job queue",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "where is the nginx config",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how does the websocket connection reconnect",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "which mongodb collections does the app use",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how do the jest tests mock the api",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how is the github actions pipeline set up",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "where is the eslint config",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how does redux store the project state",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how are emails sent when ingestion finishes",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "what does the cron job that cleans old uploads do",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how is the swagger documentation customised",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  },
+  {
+   "q": "how does pagination work for the file list",
+   "kind": "offtopic",
+   "tag": "near-miss",
+   "expected": [],
+   "acceptable": []
+  }
+ ]
+}

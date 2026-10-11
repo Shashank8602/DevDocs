@@ -1,0 +1,40 @@
+# --- Secrets / local config (keep .env.example tracked) ---
+.env
+.env.*
+!.env.example
+# Demo project's fake .env is a test fixture for the upload secret-file filter
+!samples/**/.env
+
+# --- Runtime data (uploads, secret.key, ES/Postgres volumes) ---
+data/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Node / frontend ---
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# --- Eval / scratch outputs ---
+backend/eval/results/
+backend/eval/.cache/
+backend/eval/*.log
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# --- Claude Code local state ---
+.claude/

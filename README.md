@@ -89,7 +89,7 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
 | Backend | FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic |
 | Storage | PostgreSQL 16 (source of truth), Elasticsearch 8 (BM25 and dense vectors) |
-| LLM | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. |
+| LLM | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. Runs on free-tier plans |
 | Embeddings | Google Gemini `gemini-embedding-001`, 1,536 dimensions, cosine |
 | Infrastructure | Docker Compose for Postgres and Elasticsearch |
 

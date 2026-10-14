@@ -51,9 +51,14 @@ flowchart LR
 
 Evaluated on a 428-question set built against a real 104-file project (answerable and off-topic questions), using a tuning split and a separate held-out split.
 
-Each cell shows tuning / held-out. The baseline is the hybrid pipeline before path-aware keyword search, the test-file prior and follow-up resolution.
+Each cell shows two values: **tuning set / held-out set**.
 
-| Metric | Baseline pipeline | Optimised pipeline |
+- **Tuning set** (307 questions): the questions used to choose the pipeline's thresholds and settings. Scores here are the optimistic side.
+- **Held-out set** (121 questions): a separate set written afterwards in a different style (casual, typos, vague wording), with the thresholds fixed beforehand. It is the closer indicator of how the system behaves on new questions.
+
+The baseline is the hybrid pipeline before path-aware keyword search, the test-file prior and follow-up resolution.
+
+| Metric | Baseline pipeline (tuning / held-out) | Optimised pipeline (tuning / held-out) |
 |---|---|---|
 | Hit rate (a relevant file is in the context) | 0.93 / 0.94 | **0.94 / 0.94** |
 | Recall@5 | 0.83 / 0.89 | **0.87 / 0.92** |

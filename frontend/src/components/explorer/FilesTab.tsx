@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { filesApi, ProjectFile, UploadReport } from "../../api/files";
 import { readDropped } from "../../lib/dropFolder";
 import { filterSelection, FilterResult, fromInput, REASON_LABEL, Selected } from "../../lib/ignore";
@@ -9,7 +10,7 @@ import UploadReportView from "./UploadReportView";
 import ChunkInspector from "./ChunkInspector";
 import ESInspector from "./ESInspector";
 import RetrievalPlayground from "./RetrievalPlayground";
-import FloatingFileViewer from "../viewer/FloatingFileViewer";
+const FloatingFileViewer = lazy(() => import("../viewer/FloatingFileViewer"));
 
 const STATUS_LABEL: Record<string, string> = { pending: "Pending", processing: "Processing", ready: "Ready", failed: "Failed" };
 
@@ -61,12 +62,15 @@ function StatusBadge({ file, actions }: { file: ProjectFile; actions: RowActions
   );
 }
 
-function FileRow({ file, label, actions }: { file: ProjectFile; label: string; actions: RowActions }) {
+function FileRow({
+  file, label, sublabel, actions,
+}: { file: ProjectFile; label: string; sublabel?: string; actions: RowActions }) {
   const hover = "ml-2 rounded px-1.5 text-xs text-slate-400 opacity-0 focus:opacity-100 group-hover:opacity-100";
   return (
     <div className="group flex items-center rounded px-2 py-1 hover:bg-slate-100">
       <button onClick={() => actions.onOpen(file)} className="min-w-0 flex-1 truncate text-left text-sm text-slate-800" title={file.file_path}>
-        {label}
+        <span className="block truncate">{label}</span>
+        {sublabel && <span className="block truncate font-mono text-xs text-slate-500">{sublabel}</span>}
       </button>
       <StatusBadge file={file} actions={actions} />
       {actions.onChunks && (
@@ -304,7 +308,7 @@ export default function FilesTab({ projectId, processing }: { projectId: string;
             <p className="p-3 text-sm text-slate-500">No files match "{query.trim()}".</p>
           ) : (
             matches.map((f) => (
-              <FileRow key={f.id} file={f} label={f.file_path} actions={actions} />
+              <FileRow key={f.id} file={f} label={f.file_name} sublabel={f.file_path} actions={actions} />
             ))
           )
         ) : (
@@ -318,7 +322,7 @@ export default function FilesTab({ projectId, processing }: { projectId: string;
         )}
       </div>
 
-      {scanning && (
+      {scanning && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div
             role="status"
@@ -331,7 +335,8 @@ export default function FilesTab({ projectId, processing }: { projectId: string;
               className="h-7 w-7 animate-spin rounded-full border-[3px] border-slate-200 border-t-brand-600"
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {staged && (
@@ -365,7 +370,11 @@ export default function FilesTab({ projectId, processing }: { projectId: string;
       {devPanel === "es" && <ESInspector projectId={projectId} onClose={() => setDevPanel(null)} />}
       {devPanel === "playground" && <RetrievalPlayground projectId={projectId} onClose={() => setDevPanel(null)} />}
       {inspecting && <ChunkInspector projectId={projectId} file={inspecting} onClose={() => setInspecting(null)} />}
-      {viewing && <FloatingFileViewer file={viewing} onClose={() => setViewing(null)} />}
+      {viewing && (
+        <Suspense fallback={null}>
+          <FloatingFileViewer file={viewing} onClose={() => setViewing(null)} />
+        </Suspense>
+      )}
       {deleting && (
         <Modal title="Delete file?" onClose={() => setDeleting(null)}>
           <p className="text-sm text-slate-600">

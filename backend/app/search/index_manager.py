@@ -15,6 +15,7 @@ ANALYZER = "code_text"
 SETTINGS = {
     # `refresh=wait_for` on bulk writes waits for the next refresh; keep that short so ingestion stays quick.
     "refresh_interval": "250ms",
+    "number_of_replicas": 0,  # a single local node: a replica could never be assigned (index stays yellow)
     "analysis": {
         "filter": {
             # validate_token / JwtService / jwtService match as a whole and as their parts.
@@ -52,6 +53,10 @@ def mappings(dims: int) -> dict:
             "file_path": {"type": "keyword"},
             "file_type": {"type": "keyword"},
             "content": {"type": "text", "analyzer": ANALYZER},
+            # Searchable copies of the path and the heading / function name, so "what does auth.py do" and
+            # "the upload rules section" can match on them in BM25 (`file_path` itself is a keyword).
+            "path_text": {"type": "text", "analyzer": ANALYZER},
+            "section": {"type": "text", "analyzer": ANALYZER},
             "embedding": {
                 "type": "dense_vector", "dims": dims, "index": True, "similarity": "cosine",
             },
@@ -73,5 +78,11 @@ async def ensure_index(fingerprint: str, dims: int) -> str:
         except BadRequestError as exc:
             if "resource_already_exists_exception" not in str(exc):  # created concurrently is fine
                 raise
+    else:  # an index created before these fields existed: adding fields to a mapping is non-breaking
+        props = mappings(dims)["properties"]
+        await es_client.es.indices.put_mapping(
+            index=name, properties={k: props[k] for k in ("path_text", "section")},
+        )
+        await es_client.es.indices.put_settings(index=name, settings={"index": {"number_of_replicas": 0}})
     _ensured.add(name)
     return name

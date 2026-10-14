@@ -32,7 +32,11 @@ sequenceDiagram
         R-->>API: final chunks
         API->>CB: system prompt + summary + recent msgs + chunks + question
         CB-->>API: messages
-        API->>LLM: chat.completions (stream=true)
+        opt provider limiter would make the call wait
+            API-->>FE: SSE: waiting (seconds)
+        end
+        Note over API,LLM: router: primary Groq model, or the fallback Groq model<br/>(own token budget) if the primary would wait > 6 s
+        API->>LLM: chat.completions (stream=true, include_usage)
         loop tokens
             LLM-->>API: delta
             API-->>FE: SSE: token
@@ -46,7 +50,9 @@ sequenceDiagram
     end
 ```
 
+**Status.** Built through Phase 10. The orchestration lives in `generation/chat.py` (module map: `chat`, replacing the planned `generator`); citations come from `generation/citations.py`, the summary from `generation/memory.py`. The LLM wrapper reserves tokens on the shared rate limiter before each call and settles the reservation to the real usage afterwards; a failure before the first token is retried once, silently.
+
 **Rules**
 - The user message is persisted before any retrieval or LLM work.
 - The assistant message is persisted only after `done`.
-- Event order: `conversation` → `token`* → `sources` → `done` | `no_context` | `error`.
+- Event order: `conversation` → [`waiting`] → `token`* → `sources` → `done` | `no_context` | `error`.

@@ -1,4 +1,4 @@
-# Retrieval (Phase 6)
+# Retrieval (Phase 6, updated in round 2)
 
 How a question becomes the final context, how the gate and the filter were chosen, and how to re-tune them. The flow diagram is [05 — Retrieval pipeline](Diagrams/05-retrieval-pipeline.md); file order is in [Backend-File-Flow.md](../Backend-File-Flow.md). The decision and its evidence are in [Retrieval-Ablation.md](../Reports/Retrieval-Ablation.md); earlier history (the first pipeline, which used a reranker threshold) is in [Reranker-Threshold-Eval.md](../Impl_Clarifications/Reranker-Threshold-Eval.md), [Retrieval-Ablation.md](../Reports/Retrieval-Ablation.md) and [Retrieval-Experiments.md](../Reports/Retrieval-Experiments.md). The story of how it got here is in [Challenge-Retrieval-Accuracy.md](../Reports/Challenge-Retrieval-Accuracy.md).
 
@@ -7,8 +7,9 @@ How a question becomes the final context, how the gate and the filter were chose
 | Step | Where | Notes |
 |---|---|---|
 | Eligible set | `pipeline.run` | `project_id` + Postgres READY file ids; never from the client. No READY file → no ES or embedding call. |
-| BM25 + kNN | `bm25.py`, `vector.py` | Top-10 each, concurrently, isolation filter inside the query. ES errors retried twice (connection, 429, 502–504) then `RetrievalError`. |
-| RRF (k=60) | `fusion.py` | In application code. Each candidate keeps its BM25 rank and its vector similarity. Candidates are joined to Postgres chunks of READY files, so a stray ES doc never gets through. |
+| Query | `query.py` | A follow-up with a reference word (it, that, this, …) gets the previous question prepended; a standalone question is unchanged. BM25 receives the question with stopwords stripped. |
+| BM25 + kNN | `bm25.py`, `vector.py` | Top-10 each, concurrently, isolation filter inside the query. BM25 matches the terms on `content`, `path_text` and `section`. ES errors retried twice (connection, 429, 502–504) then `RetrievalError`. |
+| RRF (k=60) + test-file prior | `fusion.py` | In application code; chunks of test files then get ×0.8 unless the question mentions tests. Each candidate keeps its BM25 rank and its vector similarity. Candidates are joined to Postgres chunks of READY files, so a stray ES doc never gets through. |
 | **Gate** | `selection.gate_passes` | Refuse the question (return `NoRelevantContext`, no LLM call) unless the **best vector similarity ≥ `0.82`**. Free: it is the top score of the kNN search. |
 | Optional rerank | `reranker.py` | **Off by default** (`RERANK_TOP_N=0`). When on, the first N candidates are scored and served first in score order; it never refuses and never filters. |
 | **Relative filter** | `selection.relative_filter` | Keep a chunk only if its vector similarity is within **`0.04`** of the best chunk's, **or** it is one of the **2 best BM25 hits**. |
@@ -35,6 +36,12 @@ Overlap cleanup drops the lower-ranked chunk when two chunks of the same file ha
 | **This pipeline, held-out** | **0.958** | **0.915** | **0.860** | 0.377 | **1.1 s p50 / 1.3 s p95 (measured)** |
 
 Hit = a relevant file is among the served chunks. The questions were written by the pipeline's author against the real files, and 0.04 / top-2 were picked after seeing results, so expect smaller gains on real questions. The held-out rows are the honest ones: new questions, settings frozen beforehand, nothing tuned on them. About 95% of the new end-to-end time is the Gemini query-embedding call (p50 1.06 s). On held-out data the pipeline misses the refusal goal (0.860 vs 0.891) and the relevant-share goal (0.377 vs 0.53); see [Retrieval-Ablation.md](../Reports/Retrieval-Ablation.md).
+
+### Round 2 (2026-10-14)
+
+BM25 over path and heading with stopwords stripped, plus the test-file prior, raised MRR from 0.776 to 0.834 (tuning) and 0.705 to 0.792 (held-out), the relevant share from 0.462 to 0.533 and 0.331 to 0.423, with hit unchanged or up. File-level boosts, larger candidate lists, weighted RRF and contextual embedding headers were measured and not shipped. Details, caveats (the held-out set was used for selection) and the scripts: [Retrieval-Optimisation-Round-2.md](../Reports/Retrieval-Optimisation-Round-2.md).
+
+Existing indexes need `python -m app.search.backfill` once (adds `path_text` / `section`; no embedding calls). New ingestion fills them.
 
 ### Known weak spots
 
@@ -74,4 +81,5 @@ For a single query, the Retrieval Playground (DEV_MODE) shows every candidate's 
 | `RETRIEVAL_FINAL_TOP_K` | `5` | max chunks in the context |
 | `RETRIEVAL_CONTEXT_TOKENS` | `3000` | token budget (sized for Groq's 8,000 TPM) |
 | `RETRIEVAL_LEG_K`, `RRF_K` | `10`, `60` | per-leg Top-K and RRF constant |
+| `RETRIEVAL_TEST_PATH_FACTOR` | `0.8` | RRF-score multiplier for test-file chunks (`1` = off) |
 | `RETRIEVAL_MAX_RETRIES` | `2` | extra attempts on ES infrastructure errors |

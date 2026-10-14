@@ -19,6 +19,12 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """For code that opens short sessions of its own (a streamed chat answer must not hold one connection
+    for the whole stream). Tests override this dependency, as they do `get_session`."""
+    return SessionLocal
+
+
 async def ping_postgres() -> None:
     async with engine.connect() as conn:
         await conn.execute(text("SELECT 1"))

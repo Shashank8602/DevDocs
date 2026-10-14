@@ -18,7 +18,7 @@ from app.config import settings
 from app.models import Chunk, File, Project
 from app.providers.embeddings import EmbeddingError, get_embedding_provider
 from app.retrieval.bm25 import Hit, bm25_search
-from app.retrieval.fusion import FusedHit, rrf_fuse
+from app.retrieval.fusion import FusedHit, apply_test_prior, rrf_fuse
 from app.retrieval.reranker import RerankError, Reranker, get_reranker
 from app.retrieval.selection import Candidate, gate_passes, relative_filter, select as select_context
 from app.retrieval.vector import vector_search
@@ -106,9 +106,11 @@ async def run(
     )
 
     # 1. Eligible set: this project's READY files, from Postgres (never from the client).
-    ready_ids = list((await session.scalars(
-        select(File.id).where(File.project_id == project_id, File.status == "ready")
-    )).all())
+    ready = (await session.execute(
+        select(File.id, File.file_type).where(File.project_id == project_id, File.status == "ready")
+    )).all()
+    ready_ids = [r[0] for r in ready]
+    file_types = {str(r[0]): r[1] for r in ready}
     trace.ready_files = len(ready_ids)
     if not ready_ids or not query.strip():
         return trace
@@ -130,8 +132,10 @@ async def run(
 
     trace.bm25, trace.vector = await asyncio.gather(bm25_leg(), vector_leg())
 
-    # 3. RRF (k=60) in application code.
-    trace.fused = rrf_fuse(trace.bm25, trace.vector, settings.rrf_k)
+    # 3. RRF (k=60) in application code, then the test-file prior (not applied to questions about tests).
+    trace.fused = apply_test_prior(
+        rrf_fuse(trace.bm25, trace.vector, settings.rrf_k), query, settings.retrieval_test_path_factor,
+    )
     if not trace.fused:
         return trace
 
@@ -150,7 +154,7 @@ async def run(
             f.chunk_id, f.file_id, f.file_path, rows[f.chunk_id].content,
             rows[f.chunk_id].line_start, rows[f.chunk_id].line_end, rows[f.chunk_id].page_number,
             rows[f.chunk_id].section, rows[f.chunk_id].token_count, f.rrf_score, f.bm25_rank, f.vector_rank,
-            vector_score=f.vector_score,
+            vector_score=f.vector_score, file_type=file_types.get(f.file_id),
         )
         for f in trace.fused if f.chunk_id in rows
     ]

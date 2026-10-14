@@ -16,3 +16,5 @@ markdown-it-py>=3,<5
 langchain-text-splitters>=0.3,<2
 PyYAML>=6,<7
 fastembed>=0.4,<1
+openai>=1.50,<3
+cryptography>=43,<46

@@ -22,6 +22,7 @@ class Candidate:
     # "gate" | "relative" | "threshold" | "overlap" | "budget" | "top_k"
     dropped_by: str | None = None
     vector_score: float | None = None  # cosine score from the vector leg; None if only BM25 found it
+    file_type: str | None = None  # doc | source | other (citations show line ranges for source files only)
 
 
 def gate_passes(top_vector_score: float | None, threshold: float) -> bool:

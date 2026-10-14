@@ -431,3 +431,25 @@ async def test_vector_peek_is_dev_only_and_project_scoped(client, ingest, monkey
     assert (await client.get(f"/projects/{other}/files/{fid}/vectors")).status_code == 404  # wrong project
     monkeypatch.setattr(settings, "dev_mode", False)
     assert (await client.get(f"/projects/{pid}/files/{fid}/vectors")).status_code == 404
+
+
+async def test_modified_file_reuses_vectors_of_unchanged_chunks(client, ingest, _search_backend):
+    """Editing one function must not pay to re-embed the functions that did not change."""
+    def func(i):
+        lines = [f"def func_{i}(x):"] + [f"    value_{j} = x + {i * 100 + j}" for j in range(60)] + ["    return x"]
+        return "\n".join(lines) + "\n\n\n"
+
+    body = "".join(func(i) for i in range(8))
+    pid = await _ingested(client, ingest, [("m.py", body.encode())])
+    chunks = await _es_count(client, pid)
+    first = sum(n for kind, n in _search_backend.calls if kind == "documents")
+    assert chunks >= 3 and first == chunks  # several chunks, each embedded once
+
+    _search_backend.calls.clear()
+    edited = body + "def brand_new(x):\n    return x * 99\n"
+    file_id = (await client.get(f"/projects/{pid}/files")).json()[0]["id"]
+    assert (await client.put(f"/files/{file_id}", files={"file": ("m.py", edited.encode())})).status_code == 200
+    await ingest(pid)
+    embedded_again = sum(n for kind, n in _search_backend.calls if kind == "documents")
+    assert 1 <= embedded_again < chunks  # only the new / changed text, not the whole file again
+    assert await _es_count(client, pid) >= chunks

@@ -1,4 +1,5 @@
 """Integration fixtures: a real Postgres (docker-compose) with a separate test database."""
+import asyncio
 import uuid
 
 import hashlib
@@ -14,9 +15,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.config import settings
-from app.db import Base, get_session
+from app.db import Base, get_session, get_session_factory
 from app.ingestion import worker
 from app.main import app
+from app.providers.llm import LLMError, set_llm_provider
 from app.providers.embeddings import fingerprint_of, set_embedding_provider
 from app.search import es_client, index_manager
 
@@ -70,6 +72,55 @@ class FakeEmbeddingProvider:
     async def embed_query(self, text):
         self.calls.append(("query", 1))
         return self._vec(text)
+
+
+class FakeLLMProvider:
+    """Offline chat LLM. Streams `tokens`; `fail_before` raises before the first token, `fail_after`
+    raises after that many tokens. `calls` records every prompt, so tests can assert the LLM was skipped."""
+    provider, model = "fake", "fake-llm"
+
+    def __init__(self):
+        self.tokens = ["Authentication ", "uses ", "JWT tokens."]
+        self.fail_before = False
+        self.fail_after: int | None = None
+        self.fail_times = 0  # raise before the first token this many times, then behave
+        self.wait_seconds = 0.0  # what `wait_estimate` reports (the rate limiter's pending wait)
+        self.hang = False  # emit nothing and never finish (inactivity-timeout tests)
+        self.calls: list[list[dict]] = []
+
+    def wait_estimate(self, messages, max_output_tokens=None):
+        return self.wait_seconds
+
+    async def stream(self, messages, max_output_tokens=None):
+        self.calls.append(messages)
+        if self.hang:
+            await asyncio.Event().wait()
+        if self.fail_times > 0:
+            self.fail_times -= 1
+            raise LLMError("HTTP 500 provider exploded (internal detail)")
+        if self.fail_before:
+            raise LLMError("HTTP 500 provider exploded (internal detail)")
+        for i, token in enumerate(self.tokens):
+            if self.fail_after is not None and i >= self.fail_after:
+                raise LLMError("stream broke (internal detail)")
+            yield token
+
+
+@pytest.fixture(autouse=True)
+def _isolated_settings(tmp_path):
+    """Settings tests change the shared `settings` object; restore it, and keep secret.key out of data/."""
+    snapshot = dict(settings.__dict__)
+    settings.data_dir = tmp_path / "data"
+    yield
+    settings.__dict__.update(snapshot)
+
+
+@pytest.fixture(autouse=True)
+def llm():
+    fake = FakeLLMProvider()
+    set_llm_provider(fake)
+    yield fake
+    set_llm_provider(None)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -128,6 +179,7 @@ async def client(sessions):
             yield session
 
     app.dependency_overrides[get_session] = override_session
+    app.dependency_overrides[get_session_factory] = lambda: sessions
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         yield c

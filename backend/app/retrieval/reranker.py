@@ -48,8 +48,18 @@ class CrossEncoderReranker:
 
 
 class JevReranker:
-    """Placeholder until the Jev ("System One") API details are provided."""
+    """Placeholder until the Jev ("System One") API details are provided. Its settings (base URL, model, key)
+    are already stored and editable; only the request / response mapping below is missing."""
     name = "jev"
+
+    def __init__(self, base_url: str = "", model: str = "", api_key: str = ""):
+        self.base_url, self.model, self.api_key = base_url, model, api_key
+
+    async def ping(self) -> None:
+        """Connection check used by Settings -> Test Connection."""
+        if not self.base_url:
+            raise RerankError("Jev base URL is not set")
+        raise RerankError("JevReranker is not implemented yet (waiting for its API details)")
 
     async def score(self, query: str, passages: list[str]) -> list[float]:
         raise RerankError("JevReranker is not implemented yet (waiting for its API details)")
@@ -61,7 +71,10 @@ _reranker: Reranker | None = None
 def get_reranker() -> Reranker:
     global _reranker
     if _reranker is None:
-        _reranker = JevReranker() if settings.reranker == "jev" else CrossEncoderReranker(settings.reranker_model)
+        _reranker = (
+            JevReranker(settings.jev_base_url, settings.jev_model, settings.jev_api_key)
+            if settings.reranker == "jev" else CrossEncoderReranker(settings.reranker_model)
+        )
     return _reranker
 
 

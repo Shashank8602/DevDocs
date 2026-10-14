@@ -169,12 +169,18 @@ async def _ingest_file(
 
 async def _index_file(provider, project_id, file_id, file_path, file_type, chunks, chunk_ids) -> None:
     index = await ensure_index(provider.fingerprint, provider.dims)
+    # A modified file keeps most of its chunk texts: reuse those vectors and embed only what is new.
+    reusable = await indexer.vectors_by_content(provider.fingerprint, project_id, file_id)
     await indexer.delete_file_docs(provider.fingerprint, file_id)  # stale docs of a modified / retried file
     if not chunks:
         return
-    vectors = await provider.embed_documents([c.content for c in chunks])
+    keys = [indexer.content_key(c.content) for c in chunks]
+    fresh = list(dict.fromkeys(c.content for c, k in zip(chunks, keys) if k not in reusable))
+    if fresh:
+        reusable = {**reusable, **dict(zip((indexer.content_key(t) for t in fresh), await provider.embed_documents(fresh)))}
+    vectors = [reusable[k] for k in keys]
     await indexer.index_chunks(index, [
-        indexer.IndexDoc(cid, project_id, file_id, file_path, file_type, c.content, vec)
+        indexer.IndexDoc(cid, project_id, file_id, file_path, file_type, c.content, vec, c.section)
         for cid, c, vec in zip(chunk_ids, chunks, vectors)
     ])
 

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { filesApi, ProjectFile } from "../../api/files";
 import CodeRenderer from "./CodeRenderer";
 import DocxRenderer from "./DocxRenderer";
@@ -26,7 +27,14 @@ async function load(file: ProjectFile, binary: boolean) {
   return binary ? res.arrayBuffer() : res.text();
 }
 
-export default function FloatingFileViewer({ file, onClose }: { file: ProjectFile; onClose: () => void }) {
+interface Props {
+  file: ProjectFile;
+  onClose: () => void;
+  /** Cited line ranges to highlight (code files). */
+  highlight?: [number, number][];
+}
+
+export default function FloatingFileViewer({ file, onClose, highlight }: Props) {
   const kind = kindOf(file);
   const binary = kind === "pdf" || kind === "docx";
   const { data, error, isLoading } = useQuery({
@@ -42,14 +50,21 @@ export default function FloatingFileViewer({ file, onClose }: { file: ProjectFil
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div role="dialog" aria-modal="true" aria-label={file.file_path} className="flex h-[85vh] w-full max-w-4xl flex-col rounded-lg bg-surface shadow-xl">
+      <div role="dialog" aria-modal="true" aria-label={file.file_path} className="flex h-[85vh] w-full max-w-4xl animate-scale-in flex-col overflow-hidden rounded-xl bg-surface shadow-pop">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <span className="truncate text-sm font-medium text-slate-800" title={file.file_path}>{file.file_path}</span>
+          <span className="min-w-0 truncate font-mono text-sm font-medium text-slate-800" title={file.file_path}>
+            {file.file_path}
+            {highlight && highlight.length > 0 && (
+              <span className="ml-2 font-sans text-xs font-normal text-slate-500">
+                cited: {highlight.map(([a, b]) => (a === b ? a : `${a}–${b}`)).join(", ")}
+              </span>
+            )}
+          </span>
           <button onClick={onClose} aria-label="Close" className="ml-3 rounded px-2 text-xl leading-none text-slate-500 hover:bg-slate-100">×</button>
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
@@ -62,11 +77,12 @@ export default function FloatingFileViewer({ file, onClose }: { file: ProjectFil
               {kind === "markdown" && <MarkdownRenderer text={data as string} />}
               {kind === "csv" && <TableRenderer text={data as string} />}
               {kind === "text" && <TextRenderer text={data as string} />}
-              {kind === "code" && <CodeRenderer text={data as string} language={file.language} />}
+              {kind === "code" && <CodeRenderer text={data as string} language={file.language} highlight={highlight} />}
             </>
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

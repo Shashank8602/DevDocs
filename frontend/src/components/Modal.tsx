@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface Props {
   title: string;
@@ -14,16 +15,16 @@ export default function Modal({ title, onClose, children, wide }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full ${wide ? "flex max-w-4xl flex-col overflow-hidden p-0" : "max-w-md p-6"} max-h-[90vh] rounded-lg bg-surface shadow-xl`}
+        className={`w-full ${wide ? "flex max-w-4xl flex-col overflow-hidden p-0" : "max-w-md p-6"} max-h-[90vh] animate-scale-in rounded-xl bg-surface shadow-pop`}
       >
         {wide ? (
           <>
@@ -31,7 +32,7 @@ export default function Modal({ title, onClose, children, wide }: Props) {
               <h2 className="min-w-0 truncate text-lg font-semibold">{title}</h2>
               <button
                 onClick={onClose}
-                className="shrink-0 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-100 active:scale-95"
+                className="btn-danger shrink-0 px-3 py-1.5"
               >
                 Close
               </button>
@@ -45,6 +46,7 @@ export default function Modal({ title, onClose, children, wide }: Props) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

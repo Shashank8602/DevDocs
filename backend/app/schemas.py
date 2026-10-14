@@ -99,6 +99,37 @@ class ActiveIngestion(BaseModel):
     total: int
 
 
+# --- chat (Phase 7) ---
+class ChatRequest(BaseModel):
+    """One question. Validation: not empty or whitespace-only, at most 8,000 characters."""
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=8000)]
+
+
+class ConversationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class MessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    role: str  # user | assistant
+    content: str
+    sources_json: list | None  # frozen citations of an assistant answer
+    gen_state: str | None  # user messages: pending | answered | failed | stopped | dismissed
+    created_at: datetime
+
+
+class ConversationDetail(ConversationOut):
+    project_id: uuid.UUID
+    messages: list[MessageOut]
+
+
 # --- dev-only: ES Inspector and Retrieval Playground (Phase 5) ---
 class ESInspectorFile(BaseModel):
     file_id: uuid.UUID

@@ -7,7 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.files import project_dir
-from app.db import get_session
+from app.db import get_session, get_session_factory
+from app.ingestion import reindex
 from app.models import File, Project
 from app.providers.embeddings import get_embedding_provider
 from app.schemas import LanguageCount, ProjectCreate, ProjectOut, ProjectOverview, ProjectUpdate
@@ -97,3 +98,26 @@ async def delete_project(project_id: uuid.UUID, session: AsyncSession = Depends(
         log.warning("could not remove ES docs of project %s: %r", project_id, exc)
     shutil.rmtree(project_dir(project_id), ignore_errors=True)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{project_id}/reindex", status_code=status.HTTP_202_ACCEPTED)
+async def start_reindex(
+    project_id: uuid.UUID, session: AsyncSession = Depends(get_session),
+    sessions=Depends(get_session_factory),
+):
+    """Re-embed the project's stored chunks into the index of the current embedding settings (no re-upload,
+    no re-chunking). Progress: GET /projects/{id}/reindex."""
+    project = await _get_or_404(session, project_id)
+    if project.status != "needs_reindex":
+        raise HTTPException(status.HTTP_409_CONFLICT, "This project does not need a re-index.")
+    try:
+        await reindex.start(project_id, sessions)
+    except reindex.ReindexConflict as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    return reindex.progress_of(project_id)
+
+
+@router.get("/{project_id}/reindex")
+async def reindex_progress(project_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+    await _get_or_404(session, project_id)
+    return reindex.progress_of(project_id)

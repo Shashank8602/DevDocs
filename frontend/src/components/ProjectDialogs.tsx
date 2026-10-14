@@ -1,10 +1,9 @@
 import { FormEvent, useState } from "react";
 import Modal from "./Modal";
 
-const input =
-  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
-const primary = "rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50";
-const secondary = "rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50";
+const input = "input";
+const primary = "btn-primary";
+const secondary = "btn-secondary";
 
 interface FormProps {
   title: string;
@@ -71,7 +70,7 @@ export function DeleteProjectDialog({ name, busy, error, onConfirm, onClose }: D
         <button
           onClick={onConfirm}
           disabled={busy}
-          className="rounded-md bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-danger-hover disabled:opacity-50"
+          className="btn bg-danger text-white hover:bg-danger-hover"
         >
           Delete
         </button>

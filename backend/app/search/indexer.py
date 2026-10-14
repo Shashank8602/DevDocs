@@ -1,5 +1,6 @@
 """Writes and deletes chunk documents in Elasticsearch. Postgres stays the source of truth:
 callers write Postgres first, then index here, and only then mark the file `ready`."""
+import hashlib
 import uuid
 from dataclasses import dataclass
 
@@ -19,6 +20,7 @@ class IndexDoc:
     file_type: str
     content: str
     embedding: list[float]
+    section: str | None = None  # heading path / function name; searchable in BM25
 
 
 async def index_chunks(index: str, docs: list[IndexDoc]) -> None:
@@ -31,6 +33,7 @@ async def index_chunks(index: str, docs: list[IndexDoc]) -> None:
             "_source": {
                 "project_id": str(d.project_id), "file_id": str(d.file_id), "file_path": d.file_path,
                 "file_type": d.file_type, "content": d.content, "embedding": d.embedding,
+                "path_text": d.file_path, "section": d.section,
             },
         }
         for d in docs
@@ -86,3 +89,25 @@ async def get_vectors(fingerprint: str, project_id: uuid.UUID, file_id: uuid.UUI
     except NotFoundError:
         return {}
     return {h["_id"]: h["_source"]["embedding"] for h in resp["hits"]["hits"] if "embedding" in h["_source"]}
+
+
+def content_key(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+async def vectors_by_content(
+    fingerprint: str, project_id: uuid.UUID, file_id: uuid.UUID, size: int = 1000,
+) -> dict[str, list[float]]:
+    """{sha256(content): embedding} of one file's current docs. When a file is modified most of its chunks
+    keep their text, so their vectors can be reused instead of paying for the same embedding again."""
+    try:
+        resp = await es_client.es.search(
+            index=index_name(fingerprint), size=size, source_includes=["content", "embedding"],
+            query={"bool": {"filter": [{"term": {"project_id": str(project_id)}}, {"term": {"file_id": str(file_id)}}]}},
+        )
+    except NotFoundError:
+        return {}
+    return {
+        content_key(h["_source"]["content"]): h["_source"]["embedding"]
+        for h in resp["hits"]["hits"] if "embedding" in h["_source"] and "content" in h["_source"]
+    }

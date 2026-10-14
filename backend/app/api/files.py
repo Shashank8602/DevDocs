@@ -81,6 +81,8 @@ async def upload(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Project not found")
     if project.status == "processing":
         raise HTTPException(status.HTTP_409_CONFLICT, "Project is being processed")
+    if project.status == "needs_reindex":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Re-index required before adding files")
     if len(files) != len(paths):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "files and paths must match")
 
@@ -182,6 +184,8 @@ async def replace_file(
     project = await session.get(Project, row.project_id)
     if project is not None and project.status == "processing":
         raise HTTPException(status.HTTP_409_CONFLICT, "Project is being processed")
+    if project is not None and project.status == "needs_reindex":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Re-index required before changing files")
 
     staging = project_dir(row.project_id) / f".staging-{uuid.uuid4().hex}"
     staging.mkdir(parents=True, exist_ok=True)
@@ -221,6 +225,9 @@ async def retry_file(file_id: uuid.UUID, session: AsyncSession = Depends(get_ses
     row = await _file_or_404(session, file_id)
     if row.status != "failed":
         raise HTTPException(status.HTTP_409_CONFLICT, "Only failed files can be retried")
+    project = await session.get(Project, row.project_id)
+    if project is not None and project.status == "needs_reindex":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Re-index required before retrying files")
     row.status, row.error_message = "pending", None
     await refresh_project_status(session, row.project_id)
     await session.commit()

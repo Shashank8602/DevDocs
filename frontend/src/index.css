@@ -11,7 +11,8 @@
 :root {
   color-scheme: light;
   --surface: 255 255 255;
-  --slate-50: 248 250 252;
+  --shadow: 15 23 42;
+  --slate-50: 246 248 251;
   --slate-100: 241 245 249;
   --slate-200: 226 232 240;
   --slate-300: 203 213 225;
@@ -49,6 +50,7 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --shadow: 0 0 0;
   --surface: 22 27 38;
   --slate-50: 15 19 28; /* page background */
   --slate-100: 33 40 54; /* hover / subtle fills */
@@ -86,9 +88,64 @@
   --hl-attr: 126 231 135;
 }
 
+html { font-feature-settings: "cv11", "ss01"; }
+
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-slate-50 font-sans text-slate-900 antialiased;
+  background-image:
+    radial-gradient(60rem 28rem at 85% -10%, rgb(var(--brand-500) / 0.08), transparent 60%),
+    radial-gradient(48rem 24rem at -10% 0%, rgb(var(--brand-600) / 0.05), transparent 60%);
+  background-attachment: fixed;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+code, pre, kbd, samp { font-family: theme("fontFamily.mono"); }
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid rgb(var(--brand-500));
+    outline-offset: 2px;
+  }
+}
+
+/* Quiet, theme-aware scrollbars */
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--slate-300)) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--slate-300)); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--slate-400)); background-clip: content-box; border: 2px solid transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Shared component classes */
+@layer components {
+  .card { @apply rounded-xl border border-slate-200 bg-surface shadow-card; }
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium
+      transition duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn text-white shadow-sm;
+    background-image: linear-gradient(135deg, rgb(var(--brand-500)), rgb(var(--brand-600)));
+  }
+  .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 6px 16px -6px rgb(var(--brand-600) / 0.6); }
+  .btn-secondary { @apply btn border border-slate-300 bg-surface text-slate-700 shadow-sm hover:bg-slate-100; }
+  .btn-ghost { @apply btn text-slate-600 hover:bg-slate-100; }
+  .btn-danger { @apply btn border border-red-200 bg-red-50 text-red-600 hover:bg-red-100; }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 text-sm text-slate-900 shadow-sm
+      transition placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25;
+  }
+  select.input {
+    @apply cursor-pointer appearance-none pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 7.5 5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 1.1rem;
+  }
+  .label { @apply mb-1 block text-sm font-medium text-slate-700; }
+  .hint { @apply mt-1 text-xs text-slate-500; }
 }
 
 ::selection {

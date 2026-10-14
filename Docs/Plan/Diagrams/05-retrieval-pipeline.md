@@ -4,16 +4,17 @@ Hybrid retrieval from question to final context. Source: Plan → Backend Behavi
 
 ```mermaid
 flowchart TD
-    Q["User question"] --> Elig["Eligible set:<br/>project_id = current<br/>AND file status = ready<br/>(enforced by backend)"]
+    Q["User question<br/>(a follow-up with a reference word<br/>gets the previous question prepended)"] --> Elig["Eligible set:<br/>project_id = current<br/>AND file status = ready<br/>(enforced by backend)"]
     Elig --> Par{{"Run concurrently"}}
 
-    Par --> BM["ES BM25 match on content<br/>Top-K 10<br/>(code-aware analyzer)"]
+    Par --> BM["ES BM25: stopword-stripped terms on<br/>content + path_text + section<br/>Top-K 10 (code-aware analyzer)"]
     Par --> EQ["Embed question"] --> KNN["ES knn on dense_vector<br/>Top-K 10, num_candidates ~100"]
 
     BM --> RRF["RRF fusion (k = 60)<br/>in application code<br/>single ranking, no duplicates<br/>each chunk keeps BM25 rank + vector similarity"]
     KNN --> RRF
+    RRF --> Prior["Test-file prior:<br/>chunks of test files x0.8<br/>(unless the question is about tests)"]
 
-    RRF --> Gate{"Gate:<br/>best vector similarity<br/>>= 0.82 ?"}
+    Prior --> Gate{"Gate:<br/>best vector similarity<br/>>= 0.82 ?"}
     Gate -- no --> NRC["NoRelevantContext (reason: gate)<br/>LLM is NOT called"]
     Gate -- yes --> RR{"Optional reranker<br/>RERANK_TOP_N > 0 ? (default: off)"}
     RR -- "on" --> CE["Score first N candidates<br/>(CrossEncoder or Jev)<br/>serve them first, best score first"]

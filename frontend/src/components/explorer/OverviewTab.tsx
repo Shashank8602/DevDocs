@@ -52,10 +52,6 @@ export default function OverviewTab({ projectId }: { projectId: string }) {
           </>
         )}
       </div>
-
-      <p className="text-sm text-slate-500">
-        Last updated: {data.last_updated ? new Date(data.last_updated).toLocaleString() : "—"}
-      </p>
     </div>
   );
 }

@@ -6,6 +6,7 @@ rare, batched by token budget, and still retried with backoff on HTTP 429 (and t
 import asyncio
 import logging
 import re
+from collections import OrderedDict
 from typing import Protocol
 
 import httpx
@@ -16,6 +17,7 @@ from app.providers.rate_limit import RateLimiter, batch_by_budget, estimate_toke
 log = logging.getLogger("devdocs.embeddings")
 
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
+QUERY_CACHE_SIZE = 256
 
 
 class EmbeddingError(Exception):
@@ -51,6 +53,11 @@ class GeminiEmbeddingProvider:
         self.transport = transport  # tests inject a mock transport; None uses the network
         self.batch_size, self.max_retries, self.backoff = batch_size, max_retries, backoff
         self.limiter = limiter or RateLimiter()  # unlimited unless one is supplied
+        # Query path: one keep-alive connection (no TLS handshake per question) and a small LRU, because a
+        # repeated question (Retry, Regenerate, the same follow-up) must not cost an API call or ~1 s.
+        self._query_client: httpx.AsyncClient | None = None
+        self._query_loop: asyncio.AbstractEventLoop | None = None
+        self._query_cache: OrderedDict[str, list[float]] = OrderedDict()
 
     @property
     def fingerprint(self) -> str:
@@ -63,9 +70,27 @@ class GeminiEmbeddingProvider:
                 vectors += await self._batch(client, batch, "RETRIEVAL_DOCUMENT")
         return vectors
 
+    def _client_for_queries(self) -> httpx.AsyncClient:
+        loop = asyncio.get_running_loop()
+        if self._query_client is None or self._query_client.is_closed or self._query_loop is not loop:
+            self._query_client = httpx.AsyncClient(timeout=60, transport=self.transport)
+            self._query_loop = loop
+        return self._query_client
+
+    async def aclose(self) -> None:
+        if self._query_client is not None and not self._query_client.is_closed:
+            await self._query_client.aclose()
+
     async def embed_query(self, text: str) -> list[float]:
-        async with httpx.AsyncClient(timeout=60, transport=self.transport) as client:
-            return (await self._batch(client, [text], "RETRIEVAL_QUERY"))[0]
+        cached = self._query_cache.get(text)
+        if cached is not None:
+            self._query_cache.move_to_end(text)
+            return cached
+        vector = (await self._batch(self._client_for_queries(), [text], "RETRIEVAL_QUERY"))[0]
+        self._query_cache[text] = vector
+        while len(self._query_cache) > QUERY_CACHE_SIZE:
+            self._query_cache.popitem(last=False)
+        return vector
 
     async def _batch(self, client: httpx.AsyncClient, texts: list[str], task: str) -> list[list[float]]:
         if not self.api_key:
@@ -114,7 +139,7 @@ def get_embedding_provider() -> EmbeddingProvider:
     global _provider
     if _provider is None:
         _provider = GeminiEmbeddingProvider(
-            settings.gemini_api_key, settings.embedding_model, settings.embedding_dims,
+            settings.embedding_api_key or settings.gemini_api_key, settings.embedding_model, settings.embedding_dims,
             settings.embedding_batch_size, settings.embedding_max_retries, settings.embedding_backoff_seconds,
             limiter=get_limiter("gemini_embedding"),
         )

@@ -158,7 +158,7 @@ They make the invisible parts of the pipeline visible, so they can be demonstrat
 - An off-topic query ("best beaches in Goa") returns **No relevant context**.
 - `python -m eval.run` prints a metrics table and the gate threshold selection; `python -m eval.holdout` reports the frozen-set comparison with the previous pipeline.
 
-## Phase 7 — Chat with Streaming RAG Answers
+## Phase 7 — Chat with Streaming RAG Answers ✅ Done
 **Build**
 - `conversations` and `messages` tables.
 - New Chat starts as a temporary blank state. The first message creates the conversation and gives it a title derived from the question.
@@ -180,7 +180,7 @@ They make the invisible parts of the pipeline visible, so they can be demonstrat
 - In a project whose only file failed, chat is disabled and shows the failure message.
 - **Rate-limit demo:** ask two long questions back to back with `GROQ_LLM_TPM` set low. The second waits (the loading phrases keep rotating, the backend log shows `rate limiter: waiting …s`) instead of failing with a 429 error.
 
-## Phase 8 — Citations & Source Navigation
+## Phase 8 — Citations & Source Navigation ✅ Done
 **Build**
 - Application-side citation builder:
   - keeps retrieval order
@@ -198,7 +198,7 @@ They make the invisible parts of the pipeline visible, so they can be demonstrat
 - Delete `auth.py` in the Explorer, then click its citation in an old answer: the deleted-file message appears and the answer is unchanged.
 - pytest: citation formatting rules.
 
-## Phase 9 — Conversation Management & Context Memory
+## Phase 9 — Conversation Management & Context Memory ✅ Done
 **Build**
 - Summary and title LLM calls go through the same `LLMProvider` wrapper, so they draw from the same shared rate-limit window as chat answers (no separate wiring).
 - Conversation sidebar: list, switch, and delete with confirmation.
@@ -212,7 +212,7 @@ They make the invisible parts of the pipeline visible, so they can be demonstrat
 - In a long conversation (with a lowered threshold), the Context Inspector shows a summary plus only the recent messages.
 - A follow-up like "where is that token generated?" still resolves correctly.
 
-## Phase 10 — Interruption, Errors & Resilience States
+## Phase 10 — Interruption, Errors & Resilience States ✅ Done
 **Build**
 - **Stop**: the client aborts and the server cancels the LLM call. The partial answer stays visible but is not saved, with **[Stopped] [Retry] [Cancel]** shown.
 - **Retry**: reuses the same user message (no duplicate) and runs retrieval and the LLM again from scratch.
@@ -230,7 +230,7 @@ They make the invisible parts of the pipeline visible, so they can be demonstrat
 - With `FAULT_LLM=once`, the answer succeeds after one silent automatic retry.
 - Provider error text never appears in the UI.
 
-## Phase 11 — Settings, Re-indexing & Jev Adapter
+## Phase 11 — Settings, Re-indexing & Jev Adapter ✅ Done (Jev adapter pending its API details)
 **Build**
 - Re-indexing re-embeds stored chunks through the embedding provider, so it is paced by the same shared limiter. The Settings UI later replaces the `.env` rate-limit values.
 - Settings page with four sections:
@@ -254,7 +254,9 @@ They make the invisible parts of the pipeline visible, so they can be demonstrat
   - the Chunk Inspector shows the same chunk IDs as before
   - chat works again
 
-## Phase 12 — Hardening & V1 Acceptance
+## Phase 12 — Hardening & V1 Acceptance ✅ Done (see notes)
+
+> **Status notes.** README, the pytest suite and the eval harness are done; the gate and budgets were re-checked with the eval (no change to the gate; BM25 fields and the test-file prior were added, see [Retrieval-Optimisation-Round-2.md](../Reports/Retrieval-Optimisation-Round-2.md)). The full manual acceptance walkthrough on a fresh clone has not been run by a person; the automated suite and a live smoke test against Groq and Gemini have. Phase 11's `JevReranker` stays a stub until Jev's API details are provided.
 **Build**
 - Tune the threshold and context budgets using the eval.
 - Complete the pytest suite.

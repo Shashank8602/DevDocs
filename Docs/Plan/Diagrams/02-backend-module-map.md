@@ -30,8 +30,9 @@ flowchart TD
     end
 
     subgraph retrieval["retrieval/"]
+        r0["query<br/>keywords, follow-up"]
         r1["bm25, vector"]
-        r2["fusion (RRF)"]
+        r2["fusion (RRF)<br/>+ test-file prior"]
         r3["reranker<br/>interface, cross_encoder, jev"]
         r5["selection<br/>threshold, overlap, budget"]
         r4["pipeline"]
@@ -40,14 +41,15 @@ flowchart TD
     subgraph generation["generation/"]
         g1["prompts"]
         g2["context_builder"]
-        g3["generator"]
-        g4["summarizer, titles"]
+        g3["chat<br/>(turn orchestration, SSE events)"]
+        g4["memory (summary), citations,<br/>inspector (dev)"]
     end
 
     subgraph shared["shared services"]
         p["providers/<br/>llm, embeddings"]
         c["citations.py"]
-        ss["settings_service, crypto"]
+        ss["settings_store<br/>(validation, Fernet keys)"]
+        ri["ingestion/reindex"]
     end
 
     main --> api
@@ -78,6 +80,12 @@ flowchart TD
     g3 --> p
     g4 --> p
     ss --> p
+    r4 --> r0
+    r1 --> r0
+    a4 --> ri
+    ri --> p
+    ri --> search
+    g4 --> p
 ```
 
 **Rules**

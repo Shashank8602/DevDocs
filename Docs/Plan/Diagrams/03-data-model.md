@@ -4,6 +4,8 @@ PostgreSQL schema and the Elasticsearch document. Source: Plan → Data Model.
 
 ## PostgreSQL
 
+> Migration 0005 created `conversations` and `messages`; 0006 added the summary columns (`summary`, `summary_checkpoint_message_id`, `recent_token_estimate`) and the `settings` table. All of it is built.
+
 ```mermaid
 erDiagram
     PROJECTS ||--o{ FILES : "has (cascade)"
@@ -68,7 +70,8 @@ erDiagram
     }
     SETTINGS {
         int id PK "single row"
-        jsonb config "API keys Fernet-encrypted"
+        jsonb data "overrides of .env values; API keys Fernet-encrypted"
+        timestamp updated_at
     }
 ```
 
@@ -85,6 +88,8 @@ classDiagram
         file_path : keyword
         file_type : keyword
         content : text (code-aware analyzer)
+        path_text : text (code-aware analyzer, BM25 on the path)
+        section : text (code-aware analyzer, heading / function name)
         embedding : dense_vector(1536, cosine)
     }
 ```

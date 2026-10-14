@@ -4,7 +4,7 @@
 
 DevDocs is a project-scoped retrieval-augmented assistant for software projects. Upload a project folder, and DevDocs indexes it incrementally and lets you ask questions about the code and documentation. Every answer is grounded in your files and links back to the exact lines it came from. Questions the project cannot answer are declined instead of guessed.
 
-It runs locally, for a single user, on free-tier APIs.
+It runs locally, for a single user.
 
 ## Highlights
 
@@ -12,9 +12,9 @@ It runs locally, for a single user, on free-tier APIs.
 - **Hybrid retrieval.** Keyword search (BM25 over content, path and headings) and vector search are fused with Reciprocal Rank Fusion, then gated on relevance.
 - **Honest refusals.** A relevance gate declines off-topic questions without calling the LLM, which saves tokens and prevents fabricated answers.
 - **Incremental ingestion.** SHA-256 change detection re-processes only what changed, and unchanged chunks keep their embeddings.
-- **Built for free tiers.** Client-side rate limiting, real token accounting, and automatic routing to a second model when the primary's per-minute budget is spent.
+- **Rate-limit aware.** Client-side rate limiting, real token accounting, and automatic routing to a secondary model when the primary's per-minute budget is spent.
 - **Resilient chat.** Streaming responses, Stop / Retry / Cancel, silent retries, conversation memory with background summarisation.
-- **Fast on Groq.** Groq is the default chat provider; Gemini embeddings; both configurable at runtime.
+- **Configurable at runtime.** Models, providers, keys and retrieval tuning can be changed from the Settings page without a restart.
 
 ## Features
 
@@ -36,11 +36,11 @@ It runs locally, for a single user, on free-tier APIs.
 flowchart LR
     U["Upload folder"] --> I["Parse + chunk"]
     I --> PG[("Postgres<br/>source of truth")]
-    I --> E["Embed (Gemini)"] --> ES[("Elasticsearch<br/>BM25 + vectors")]
+    I --> E["Embed"] --> ES[("Elasticsearch<br/>BM25 + vectors")]
     Q["Question"] --> R["BM25 + kNN"] --> F["RRF fusion"] --> G{"Relevance gate"}
     ES --> R
     G -- "below threshold" --> N["Declined, no LLM call"]
-    G -- "passes" --> P["Filter + context budget"] --> L["Groq LLM (streamed)"] --> A["Answer + citations"]
+    G -- "passes" --> P["Filter + context budget"] --> L["LLM (streamed)"] --> A["Answer + citations"]
 ```
 
 1. A file becomes searchable only after its chunks are stored in Postgres and indexed in Elasticsearch.
@@ -51,12 +51,14 @@ flowchart LR
 
 Evaluated on a 428-question set built against a real 104-file project (answerable and off-topic questions), using a tuning split and a separate held-out split.
 
-| Metric | Tuning | Held-out |
+Each cell shows tuning / held-out. The baseline is the hybrid pipeline before path-aware keyword search, the test-file prior and follow-up resolution.
+
+| Metric | Baseline pipeline | Optimised pipeline |
 |---|---|---|
-| Hit rate (a relevant file is in the context) | 0.94 | 0.94 |
-| Recall@5 | 0.87 | 0.92 |
-| MRR | 0.83 | 0.79 |
-| Off-topic questions declined | 0.93 | 0.84 |
+| Hit rate (a relevant file is in the context) | 0.93 / 0.94 | **0.94 / 0.94** |
+| Recall@5 | 0.83 / 0.89 | **0.87 / 0.92** |
+| MRR (rank of the first relevant file) | 0.78 / 0.71 | **0.83 / 0.79** |
+| Off-topic questions declined | 0.93 / 0.84 | 0.93 / 0.84 |
 
 Design decisions backed by measurement:
 
@@ -71,8 +73,8 @@ Measured end to end on a laptop against the live providers (single runs; Groq la
 | | |
 |---|---|
 | Retrieval (query embedding, search, fusion) | 0.5–0.8 s, and tens of milliseconds for a repeated question |
-| First token | about 1 s on `gpt-oss-20b`, 1.5–3.5 s on `gpt-oss-120b` |
-| Burst of questions inside one minute | 1.6–2.0 s each, instead of a 40+ second stall, by routing to a second Groq model with its own budget |
+| First token | about 1 s on the smaller model, 1.5–3.5 s on the larger one |
+| Burst of questions inside one minute | 1.6–2.0 s each, instead of a 40+ second stall, by routing to a secondary model with its own rate budget |
 | Re-processing an edited file | only changed chunks are re-embedded |
 | Frontend first load | 73 KB gzipped entry chunk; pages and the file viewer load on demand |
 
@@ -87,7 +89,7 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
 | Backend | FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic |
 | Storage | PostgreSQL 16 (source of truth), Elasticsearch 8 (BM25 and dense vectors) |
-| LLM | Groq (`openai/gpt-oss-120b` by default, OpenAI-compatible API); Gemini switchable |
+| LLM | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. Both run on free-tier plans |
 | Embeddings | Google Gemini `gemini-embedding-001`, 1,536 dimensions, cosine |
 | Infrastructure | Docker Compose for Postgres and Elasticsearch |
 
@@ -96,7 +98,7 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 ### Prerequisites
 
 - Git, Docker Desktop (or Docker Engine with Compose), Python 3.11+, Node.js 18+
-- A [Groq API key](https://console.groq.com) for chat and a [Google AI Studio key](https://aistudio.google.com) for embeddings (both have free tiers)
+- An API key for the chat LLM provider and one for the embedding provider (see the Tech stack table; free-tier keys are enough)
 - About 3 GB of free RAM for Elasticsearch
 
 ### 1. Clone and configure
@@ -107,7 +109,7 @@ cd DevDocs
 cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 ```
 
-Open `.env` and set `GROQ_API_KEY` and `GEMINI_API_KEY`. Keys can also be set later in the app's Settings page.
+Open `.env` and fill in the API key variables (names are listed in `.env.example`). Keys can also be set later in the app's Settings page.
 
 ### 2. Start the databases
 
@@ -163,7 +165,7 @@ Defaults come from `.env`; the **Settings** page overrides them at runtime and s
 
 | Setting | Where | Notes |
 |---|---|---|
-| Chat provider, model, temperature, reasoning effort, fallback model | Settings → LLM | Changes apply from the next question |
+| Provider, model, temperature, reasoning effort, fallback model | Settings → LLM | Changes apply from the next question |
 | Embedding model, dimensions, embedding key | Settings → Embeddings | Changing the model marks projects "Re-index required" |
 | Reranker | Settings → Reranker | Optional, off by default |
 | Gate, filter, Top-K, token budget | Settings → Advanced RAG | Defaults come from the evaluation |
@@ -203,9 +205,9 @@ cd backend
 ## Troubleshooting
 
 - **"No files are ready yet"**: ingestion runs in the background; watch the status badges in Files. Failed files can be retried or replaced.
-- **A question waits before answering**: the free Groq tier limits tokens per minute per model. The chat shows the wait; the fallback model absorbs bursts.
+- **A question waits before answering**: the provider limits tokens per minute per model. The chat shows the wait, and the fallback model absorbs bursts.
 - **"Re-index required"**: the embedding settings changed. Use **Re-index** on the project banner; no re-upload is needed.
-- **Embedding 429 errors**: the free Gemini tier has a daily call limit. Retry the failed files later.
+- **Embedding 429 errors**: the embedding provider's daily call limit was reached. Retry the failed files later.
 - **Status indicator shows Offline or Degraded**: the backend, Postgres or Elasticsearch is not reachable; check `docker compose ps` and the backend terminal.
 
 ## Known limitations

@@ -68,7 +68,7 @@ Design decisions backed by measurement:
 
 ## Performance
 
-Measured end to end on a laptop against the live providers (single runs; Groq latency varies by about a second).
+Measured end to end on a laptop against the live providers (single runs; provider latency varies by about a second).
 
 | | |
 |---|---|
@@ -89,7 +89,7 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
 | Backend | FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic |
 | Storage | PostgreSQL 16 (source of truth), Elasticsearch 8 (BM25 and dense vectors) |
-| LLM | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. Both run on free-tier plans |
+| LLM | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. |
 | Embeddings | Google Gemini `gemini-embedding-001`, 1,536 dimensions, cosine |
 | Infrastructure | Docker Compose for Postgres and Elasticsearch |
 
@@ -98,7 +98,7 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 ### Prerequisites
 
 - Git, Docker Desktop (or Docker Engine with Compose), Python 3.11+, Node.js 18+
-- An API key for the chat LLM provider and one for the embedding provider (see the Tech stack table; free-tier keys are enough)
+- An API key for the chat LLM provider and one for the embedding provider (see the Tech stack table)
 - About 3 GB of free RAM for Elasticsearch
 
 ### 1. Clone and configure

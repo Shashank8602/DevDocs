@@ -18,17 +18,17 @@ It runs locally, for a single user.
 
 ## Features
 
-| Area | What you get |
-|---|---|
-| Projects | Create, rename, delete; per-project isolation of files, vectors and conversations |
-| Upload | Folder upload with client- and server-side filtering (ignore list, supported types, size limits), re-upload with created / modified / deleted / unchanged report |
-| Explorer | Collapsible tree, name and path search, status badges, retry / replace / delete, floating viewer for code, Markdown, PDF, DOCX, CSV and text |
-| Ingestion | Background worker, parsers and structure-aware chunkers (Python by AST, Markdown by heading, PDF by page, and more), live progress |
-| Chat | Streaming Markdown answers, syntax-highlighted code blocks, conversation sidebar, follow-up questions, Stop / Retry / Cancel |
-| Citations | Grouped by file in retrieval order, line ranges kept separate, deleted files handled gracefully |
-| Settings | LLM, embeddings, reranker and retrieval tuning; API keys encrypted at rest; Test Connection; one-click re-index when embeddings change |
-| Developer tools | Chunk Inspector, ES Inspector with vector peek, Retrieval Playground, chat Context Inspector, failure injection (toggle in Settings) |
-| Status | Live indicator for backend, database and search availability; ingestion progress in the header and project rail |
+| Area            | What you get                                                                                                                                                     |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Projects        | Create, rename, delete; per-project isolation of files, vectors and conversations                                                                                |
+| Upload          | Folder upload with client- and server-side filtering (ignore list, supported types, size limits), re-upload with created / modified / deleted / unchanged report |
+| Explorer        | Collapsible tree, name and path search, status badges, retry / replace / delete, floating viewer for code, Markdown, PDF, DOCX, CSV and text                     |
+| Ingestion       | Background worker, parsers and structure-aware chunkers (Python by AST, Markdown by heading, PDF by page, and more), live progress                               |
+| Chat            | Streaming Markdown answers, syntax-highlighted code blocks, conversation sidebar, follow-up questions, Stop / Retry / Cancel                                     |
+| Citations       | Grouped by file in retrieval order, line ranges kept separate, deleted files handled gracefully                                                                  |
+| Settings        | LLM, embeddings, reranker and retrieval tuning; API keys encrypted at rest; Test Connection; one-click re-index when embeddings change                           |
+| Developer tools | Chunk Inspector, ES Inspector with vector peek, Retrieval Playground, chat Context Inspector, failure injection (toggle in Settings)                             |
+| Status          | Live indicator for backend, database and search availability; ingestion progress in the header and project rail                                                  |
 
 ## How it works
 
@@ -53,17 +53,17 @@ Evaluated on a 428-question set built against a real 104-file project (answerabl
 
 Each cell shows two values: **tuning set / held-out set**.
 
-- **Tuning set** (307 questions): the questions used to choose the pipeline's thresholds and settings. Scores here are the optimistic side.
-- **Held-out set** (121 questions): a separate set written afterwards in a different style (casual, typos, vague wording), with the thresholds fixed beforehand. It is the closer indicator of how the system behaves on new questions.
+- **Tuning set**: the questions used to choose the pipeline's thresholds and settings. Scores here are the optimistic side.
+- **Held-out set**: a separate set written afterwards in a different style (casual, typos, vague wording), with the thresholds fixed beforehand. It is the closer indicator of how the system behaves on new questions.
 
 The baseline is the hybrid pipeline before path-aware keyword search, the test-file prior and follow-up resolution.
 
-| Metric | Baseline pipeline (tuning / held-out) | Optimised pipeline (tuning / held-out) |
-|---|---|---|
-| Hit rate (a relevant file is in the context) | 0.93 / 0.94 | **0.94 / 0.94** |
-| Recall@5 | 0.83 / 0.89 | **0.87 / 0.92** |
-| MRR (rank of the first relevant file) | 0.78 / 0.71 | **0.83 / 0.79** |
-| Off-topic questions declined | 0.93 / 0.84 | 0.93 / 0.84 |
+| Metric                                       | Baseline pipeline (tuning / held-out) | Optimised pipeline (tuning / held-out) |
+| -------------------------------------------- | ------------------------------------- | -------------------------------------- |
+| Hit rate (a relevant file is in the context) | 0.93 / 0.94                           | **0.94 / 0.94**                        |
+| Recall@5                                     | 0.83 / 0.89                           | **0.87 / 0.92**                        |
+| MRR (rank of the first relevant file)        | 0.78 / 0.71                           | **0.83 / 0.79**                        |
+| Off-topic questions declined                 | 0.93 / 0.84                           | 0.93 / 0.84                            |
 
 Design decisions backed by measurement:
 
@@ -75,13 +75,13 @@ Design decisions backed by measurement:
 
 Measured end to end on a laptop against the live providers (single runs; provider latency varies by about a second).
 
-| | |
-|---|---|
-| Retrieval (query embedding, search, fusion) | 0.5–0.8 s, and tens of milliseconds for a repeated question |
-| First token | about 1 s on the smaller model, 1.5–3.5 s on the larger one |
-| Burst of questions inside one minute | 1.6–2.0 s each, instead of a 40+ second stall, by routing to a secondary model with its own rate budget |
-| Re-processing an edited file | only changed chunks are re-embedded |
-| Frontend first load | 73 KB gzipped entry chunk; pages and the file viewer load on demand |
+|                                             |                                                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Retrieval (query embedding, search, fusion) | 0.5–0.8 s, and tens of milliseconds for a repeated question                                             |
+| First token                                 | about 1 s on the smaller model, 1.5–3.5 s on the larger one                                             |
+| Burst of questions inside one minute        | 1.6–2.0 s each, instead of a 40+ second stall, by routing to a secondary model with its own rate budget |
+| Re-processing an edited file                | only changed chunks are re-embedded                                                                     |
+| Frontend first load                         | 73 KB gzipped entry chunk; pages and the file viewer load on demand                                     |
 
 Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-Round-2.md](Docs/Reports/Retrieval-Optimisation-Round-2.md). Planned improvements: [Docs/Reports/Optimisation-Analysis.md](Docs/Reports/Optimisation-Analysis.md).
 
@@ -89,14 +89,14 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
-| Backend | FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic |
-| Storage | PostgreSQL 16 (source of truth), Elasticsearch 8 (BM25 and dense vectors) |
-| LLM | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. Runs on free-tier plans |
-| Embeddings | Google Gemini `gemini-embedding-001`, 1,536 dimensions, cosine |
-| Infrastructure | Docker Compose for Postgres and Elasticsearch |
+| Layer          | Technology                                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend       | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query                                                                                     |
+| Backend        | FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic                                                                                             |
+| Storage        | PostgreSQL 16 (source of truth), Elasticsearch 8 (BM25 and dense vectors)                                                                    |
+| LLM            | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. Runs on free-tier plans |
+| Embeddings     | Google Gemini `gemini-embedding-001`, 1,536 dimensions, cosine                                                                               |
+| Infrastructure | Docker Compose for Postgres and Elasticsearch                                                                                                |
 
 ## Run it on your machine
 
@@ -168,13 +168,13 @@ python scripts/check_providers.py
 
 Defaults come from `.env`; the **Settings** page overrides them at runtime and stores API keys encrypted (`data/secret.key`, created on first use, never committed).
 
-| Setting | Where | Notes |
-|---|---|---|
-| Provider, model, temperature, reasoning effort, fallback model | Settings → LLM | Changes apply from the next question |
-| Embedding model, dimensions, embedding key | Settings → Embeddings | Changing the model marks projects "Re-index required" |
-| Reranker | Settings → Reranker | Optional, off by default |
-| Gate, filter, Top-K, token budget | Settings → Advanced RAG | Defaults come from the evaluation |
-| Developer mode | Settings → General | Shows inspectors and failure injection |
+| Setting                                                        | Where                   | Notes                                                 |
+| -------------------------------------------------------------- | ----------------------- | ----------------------------------------------------- |
+| Provider, model, temperature, reasoning effort, fallback model | Settings → LLM          | Changes apply from the next question                  |
+| Embedding model, dimensions, embedding key                     | Settings → Embeddings   | Changing the model marks projects "Re-index required" |
+| Reranker                                                       | Settings → Reranker     | Optional, off by default                              |
+| Gate, filter, Top-K, token budget                              | Settings → Advanced RAG | Defaults come from the evaluation                     |
+| Developer mode                                                 | Settings → General      | Shows inspectors and failure injection                |
 
 All environment variables are documented in [`.env.example`](.env.example).
 
@@ -199,13 +199,13 @@ cd backend
 
 ## Documentation
 
-| | |
-|---|---|
-| [Implementation plan](Docs/Plan/DevDocs-V1-Implementation-Plan.md) | architecture, data model, behaviour per feature |
-| [Retrieval design](Docs/Plan/Retrieval.md) | pipeline, tuning, settings |
-| [Backend file flow](Docs/Backend-File-Flow.md) | module order, dependencies, runtime flows |
+|                                                                                                    |                                                                                 |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [Implementation plan](Docs/Plan/DevDocs-V1-Implementation-Plan.md)                                 | architecture, data model, behaviour per feature                                 |
+| [Retrieval design](Docs/Plan/Retrieval.md)                                                         | pipeline, tuning, settings                                                      |
+| [Backend file flow](Docs/Backend-File-Flow.md)                                                     | module order, dependencies, runtime flows                                       |
 | [Implementation challenges](Docs/Impl_Clarifications/Phases-7-12-Implementation-and-Challenges.md) | problems met while building chat, memory and settings, and how they were solved |
-| [Diagrams](Docs/Plan/Diagrams/README.md) | Mermaid diagrams |
+| [Diagrams](Docs/Plan/Diagrams/README.md)                                                           | Mermaid diagrams                                                                |
 
 ## Troubleshooting
 

@@ -148,9 +148,16 @@ async def _run(sessions: async_sessionmaker[AsyncSession], conversation_id: uuid
 
 
 async def settle() -> None:
-    """Wait for in-flight summaries (tests, shutdown)."""
-    if _tasks:
-        await asyncio.gather(*list(_tasks), return_exceptions=True)
+    """Wait for in-flight summaries (tests, shutdown).
+
+    Only tasks of the running event loop can be awaited. A task left over from a loop that has since closed
+    (each test gets its own loop) can never finish, so it is dropped instead of crashing `gather`."""
+    loop = asyncio.get_running_loop()
+    stale = {t for t in _tasks if t.get_loop() is not loop}
+    _tasks.difference_update(stale)
+    mine = [t for t in _tasks if t.get_loop() is loop]
+    if mine:
+        await asyncio.gather(*mine, return_exceptions=True)
 
 
 async def update_memory(sessions: async_sessionmaker[AsyncSession], conversation_id: uuid.UUID) -> bool:

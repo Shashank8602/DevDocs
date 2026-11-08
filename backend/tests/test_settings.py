@@ -9,7 +9,7 @@ from app.config import settings
 from app.ingestion import reindex
 from app.models import AppSettings, Chunk, Project
 from app.providers.embeddings import fingerprint_of, set_embedding_provider
-from app.providers.llm import get_llm_provider
+from app.providers.llm import get_llm_provider, set_llm_provider
 from app.search import indexer
 from tests.conftest import FakeEmbeddingProvider
 
@@ -141,7 +141,7 @@ async def test_changing_a_non_embedding_setting_does_not_flag_projects(client, i
     assert (await client.get(f"/projects/{pid}")).json()["status"] == "ready"
 
 
-async def test_reindex_re_embeds_stored_chunks_with_the_same_ids_and_chat_works_again(client, ingest, sessions, _search_backend):
+async def test_reindex_re_embeds_stored_chunks_with_the_same_ids_and_chat_works_again(client, ingest, sessions, _search_backend, llm):
     pid = await _project(client, ingest)
     async with sessions() as s:
         ids_before = {str(c) for c in (await s.scalars(select(Chunk.id))).all()}
@@ -152,6 +152,7 @@ async def test_reindex_re_embeds_stored_chunks_with_the_same_ids_and_chat_works_
     new = FakeEmbeddingProvider()
     new.model = "hash2"  # a different fingerprint, still offline
     set_embedding_provider(new)
+    set_llm_provider(llm)  # saving settings dropped the cached providers; keep the chat below offline too
 
     res = await client.post(f"/projects/{pid}/reindex")
     assert res.status_code == 202

@@ -318,7 +318,8 @@ async def test_rerank_failure_becomes_retrieval_error(client, ingest, sessions, 
 
 
 # --- Playground v2 (dev endpoint) ---
-async def test_playground_v2_shows_every_stage(client, ingest):
+async def test_playground_v2_shows_every_stage(client, ingest, monkeypatch):
+    monkeypatch.setattr(settings, "dev_mode", True)  # dev-only endpoint; do not rely on the local .env
     pid = await _ingested(client, ingest, [("auth.py", AUTH), ("jwt.py", JWT), ("pay.py", PAY)])
     res = await client.get(f"/projects/{pid}/retrieval-pipeline", params={"q": "validate_token decode token"})
     assert res.status_code == 200
@@ -333,7 +334,8 @@ async def test_playground_v2_shows_every_stage(client, ingest):
     assert body["no_relevant_context"] is False
 
 
-async def test_playground_v2_off_topic_and_gate_override(client, ingest):
+async def test_playground_v2_off_topic_and_gate_override(client, ingest, monkeypatch):
+    monkeypatch.setattr(settings, "dev_mode", True)  # dev-only endpoint; do not rely on the local .env
     pid = await _ingested(client, ingest, [("jwt.py", JWT)])
     off = (await client.get(f"/projects/{pid}/retrieval-pipeline", params={"q": "best beaches in goa"})).json()
     assert off["no_relevant_context"] is True and off["final"] == []

@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevDocs Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Direction: a code reader's workspace. Ink-teal neutrals, one highlighter-yellow accent that marks
+   "this is the evidence" (citations, selected lines, the primary action). Layout: slim sidebar + work area. */
+:root{
+  --bg:#edf1f0; --panel:#fbfcfb; --panel2:#f2f5f4; --ink:#14201f; --muted:#5a6a68; --line:#d5ddda;
+  --accent:#f2c230; --accent-ink:#4a3600; --hl:rgba(242,194,48,.34); --cta-bg:#14201f; --cta-fg:#fbfcfb;
+  --ok:#1b8a5f; --warn:#c26a12; --bad:#c8402f; --info:#2f6fb3; --shadow:0 1px 2px rgba(20,32,31,.06),0 8px 24px -12px rgba(20,32,31,.18);
+  --g-api:#2f8f8a; --g-svc:#c28a14; --g-core:#4f6fb0; --g-util:#b0577a; --g-test:#7b8a86;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif; --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b1413; --panel:#111d1c; --panel2:#162624; --ink:#e5eeec; --muted:#8fa6a2; --line:#233735;
+  --accent:#f5c84b; --accent-ink:#1b1500; --hl:rgba(245,200,75,.2); --cta-bg:#f5c84b; --cta-fg:#1b1500;
+  --ok:#3fcf94; --warn:#f0a04b; --bad:#f2705f; --info:#6aa9ec; --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -14px rgba(0,0,0,.6);
+  --g-api:#4fc0b9; --g-svc:#e1ad3a; --g-core:#7d9ee0; --g-util:#e283a8; --g-test:#8da09c; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0b1413; --panel:#111d1c; --panel2:#162624; --ink:#e5eeec; --muted:#8fa6a2; --line:#233735;
+  --accent:#f5c84b; --accent-ink:#1b1500; --hl:rgba(245,200,75,.2); --cta-bg:#f5c84b; --cta-fg:#1b1500;
+  --ok:#3fcf94; --warn:#f0a04b; --bad:#f2705f; --info:#6aa9ec; --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -14px rgba(0,0,0,.6);
+  --g-api:#4fc0b9; --g-svc:#e1ad3a; --g-core:#7d9ee0; --g-util:#e283a8; --g-test:#8da09c; color-scheme:dark;}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.ic{width:18px;height:18px;flex:none}
+.mono{font-family:var(--mono)}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.02em;text-wrap:balance}
+.app{height:100%;display:grid;grid-template-columns:244px minmax(0,1fr)}
+.app.bare{grid-template-columns:1fr}
+.app.bare .side,.app.bare .top,.app.bare #banner{display:none}
+.app.home{grid-template-columns:1fr}.app.home .side{display:none}
+
+/* sidebar */
+.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px;gap:14px;min-height:0;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px;font:700 20px var(--display);letter-spacing:-.03em;text-decoration:none}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--cta-bg);color:var(--cta-fg);display:grid;place-items:center;font:700 13px var(--mono)}
+.proj{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer;text-align:left;width:100%}
+.proj b{display:block;font-weight:600}.proj small{color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500}
+.nav a:hover{background:var(--panel2);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+:root[data-theme="dark"] .nav a[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nav a[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}}
+.nav .sec{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 10px 4px}
+.nav .tag{margin-left:auto;font:500 10px var(--mono);padding:1px 6px;border-radius:99px;border:1px solid currentColor;opacity:.8}
+.quota{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.meter small{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.bar{height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:9px}
+.bar i.ok{background:var(--ok)}
+
+/* topbar */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.top{display:flex;align-items:center;gap:12px;padding:10px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+.crumb{color:var(--muted);display:flex;gap:8px;align-items:center;min-width:0;white-space:nowrap}
+.crumb b{color:var(--ink);font-weight:600}
+.pill-search{margin-left:auto;display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel2);border-radius:99px;padding:6px 8px 6px 14px;color:var(--muted);cursor:pointer;min-width:220px}
+.kbd{font:500 11px var(--mono);border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:var(--panel);margin-left:auto}
+.iconbtn{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+.iconbtn:hover{border-color:var(--muted)}
+.who{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:99px;padding:3px 10px 3px 4px;background:var(--panel2)}
+.who select{background:transparent;border:0;font-weight:500;cursor:pointer;padding:4px 0;max-width:150px}
+.who select option{background:var(--panel);color:var(--ink)}
+.av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:600 11px var(--body);color:#fff;flex:none}
+#banner .bn{display:flex;align-items:center;gap:12px;padding:8px 24px;background:var(--hl);border-bottom:1px solid var(--line)}
+#banner .bn span{flex:1}
+#view{flex:1;min-height:0;overflow:auto;padding:28px 28px 48px}
+#view.fill{padding:0;overflow:hidden}
+
+/* primitives */
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--cta-bg);color:var(--cta-fg);border-color:transparent}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.sm{padding:4px 10px;font-size:13px;border-radius:8px}
+.btn.ghost{background:transparent}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.card h3{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mark{background:linear-gradient(transparent 58%,var(--hl) 58%);padding:0 2px}
+.pagehead{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.pagehead h1{font-size:34px;line-height:1.05}
+.pagehead p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.pagehead .acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel2);font-size:12.5px;white-space:nowrap}
+.chip.ok{color:var(--ok);border-color:currentColor;background:transparent}
+.chip.warn{color:var(--warn);border-color:currentColor;background:transparent}
+.chip.bad{color:var(--bad);border-color:currentColor;background:transparent}
+.chip.info{color:var(--info);border-color:currentColor;background:transparent}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:500}
+button.chip{cursor:pointer}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g32{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+.tile b{display:block;font:700 34px var(--display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tile span{color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto}
+.path{font-family:var(--mono);font-size:12.5px}
+.muted{color:var(--muted)}
+.empty{display:grid;place-items:center;text-align:center;gap:8px;padding:48px 16px;color:var(--muted)}
+.empty h3{color:var(--ink)}
+.langbar{display:flex;height:10px;border-radius:9px;overflow:hidden;gap:2px;margin:10px 0 8px}
+.langbar i{display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12.5px}
+.legend s{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;text-decoration:none}
+
+/* projects */
+.pcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.pcard{cursor:pointer;display:flex;flex-direction:column;gap:12px;transition:transform .15s,border-color .15s}
+.pcard:hover{transform:translateY(-2px);border-color:var(--accent)}
+.pcard h3{margin:0;font-size:19px}
+.pcard .meta{color:var(--muted);font-size:12.5px;margin-top:auto}
+.newcard{border-style:dashed;box-shadow:none;align-items:center;justify-content:center;text-align:center;color:var(--muted);min-height:200px}
+
+/* treemap */
+.tree-map{display:flex;flex-wrap:wrap;gap:4px}
+.tm{flex:1 1 70px;min-height:58px;border-radius:8px;padding:6px 8px;color:#fff;font:500 11.5px var(--mono);overflow:hidden;cursor:pointer;border:0;text-align:left;line-height:1.3}
+.tm small{display:block;opacity:.8}
+.tm:hover{filter:brightness(1.12);outline:2px solid var(--accent)}
+
+/* graph */
+.graphwrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
+.canvas{background:radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 0) 0 0/22px 22px,var(--panel);border:1px solid var(--line);border-radius:14px;position:relative;overflow:hidden}
+.canvas svg{display:block;width:100%;height:auto}
+.gnode{cursor:pointer}
+.gnode text{font:500 11px var(--mono);fill:var(--ink);paint-order:stroke;stroke:var(--panel);stroke-width:4px}
+.gnode.dim{opacity:.22}
+.gedge{stroke:var(--muted);stroke-width:1.2;opacity:.45}
+.gedge.hot{stroke:var(--accent);stroke-width:2.4;opacity:1}
+.gedge.dim{opacity:.1}
+.legend-float{position:absolute;left:14px;bottom:12px;display:flex;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:12px;color:var(--muted)}
+.legend-float s{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;text-decoration:none}
+
+/* files + viewer */
+.split{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;height:100%}
+.filetree{overflow:auto;max-height:calc(100vh - 190px)}
+.ftrow{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;cursor:pointer;border:0;background:transparent;width:100%;text-align:left}
+.ftrow:hover{background:var(--panel2)}
+.ftrow.sel{background:var(--hl)}
+.ftrow .ic{width:15px;height:15px;color:var(--muted)}
+.ftrow .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.code{font:12.5px/1.65 var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:auto}
+.ln{display:grid;grid-template-columns:44px 1fr;white-space:pre}
+.ln i{font-style:normal;text-align:right;padding-right:12px;color:var(--muted);user-select:none;opacity:.8}
+.ln.hl{background:var(--hl)}
+.ln.hl i{color:var(--ink)}
+.tk-c{color:var(--muted);font-style:italic}.tk-s{color:var(--ok)}.tk-k{color:var(--info);font-weight:500}.tk-n{color:var(--warn)}
+
+/* chat */
+.chat{display:grid;grid-template-columns:230px minmax(0,1fr) 0;height:100%}
+.chat.withsrc{grid-template-columns:230px minmax(0,1fr) minmax(320px,430px)}
+.convs{border-right:1px solid var(--line);background:var(--panel);padding:14px 10px;display:flex;flex-direction:column;gap:6px;overflow:auto}
+.conv{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--muted)}
+.conv:hover{background:var(--panel2)}
+.conv.sel{background:var(--panel2);color:var(--ink)}
+.thread{display:flex;flex-direction:column;min-width:0;min-height:0}
+.thead{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.thead h2{font-size:16px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msgs{flex:1;min-height:0;overflow:auto;padding:24px 24px 8px}
+.msgs>div{max-width:760px;margin:0 auto}
+.msg{display:flex;gap:12px;margin-bottom:22px;animation:rise .25s both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg.u{justify-content:flex-end}
+.bub{background:var(--cta-bg);color:var(--cta-fg);padding:9px 14px;border-radius:14px 14px 4px 14px;max-width:80%}
+.abody{min-width:0;flex:1}
+.abody p{margin:0 0 10px}.abody ol{margin:0 0 10px;padding-left:20px}.abody li{margin-bottom:4px}
+.abody code{font:12.5px var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.trace{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font:500 11.5px var(--mono);color:var(--muted)}
+.trace span{border:1px solid var(--line);border-radius:6px;padding:1px 7px;background:var(--panel)}
+.trace .gate-ok{color:var(--ok);border-color:currentColor}.trace .gate-no{color:var(--warn);border-color:currentColor}
+.cites{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px}
+.cite{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:4px 10px;font:12px var(--mono);cursor:pointer}
+.cite:hover{border-color:var(--accent);background:var(--hl)}
+.cite.gone{border-style:dashed;color:var(--muted);cursor:default}
+.cite.gone:hover{background:var(--panel);border-color:var(--line)}
+.acts2{display:flex;gap:4px;color:var(--muted)}
+.acts2 button{border:0;background:transparent;padding:5px;border-radius:7px;cursor:pointer;color:inherit;display:flex}
+.acts2 button:hover{background:var(--panel2);color:var(--ink)}
+.acts2 button.on{color:var(--ink);background:var(--hl)}
+.typing{display:flex;gap:5px;align-items:center;color:var(--muted)}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:b 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+.starters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+.starter{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.starter:hover{border-color:var(--accent);transform:translateY(-1px)}
+.starter small{font:12px var(--mono);color:var(--muted)}
+.welcome{text-align:left;padding:28px 0 0}
+.welcome h2{font-size:30px;line-height:1.1;margin-bottom:8px}
+.composer{padding:10px 24px 18px}
+.composer>div{max-width:760px;margin:0 auto}
+.box{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.box:focus-within{border-color:var(--accent)}
+.box textarea{border:0;background:transparent;resize:none;outline:0;min-height:24px;max-height:120px;width:100%}
+.box .bar2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
+.srcpanel{border-left:1px solid var(--line);background:var(--panel);display:none;flex-direction:column;min-width:0;overflow:hidden}
+.chat.withsrc .srcpanel{display:flex}
+.srcpanel header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.srcpanel .body{padding:14px 16px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.instant{background:var(--panel2);border-radius:10px;padding:10px 14px}
+
+/* modal / palette / toast */
+.scrim{position:fixed;inset:0;background:rgba(5,12,11,.55);display:grid;place-items:start center;padding:8vh 16px;z-index:50;backdrop-filter:blur(2px)}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);width:min(620px,100%);max-height:84vh;overflow:auto;animation:rise .2s both}
+.modal .mh{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}.modal .mh h3{flex:1;font-size:18px}
+.modal .mb{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.modal .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:8px 14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-weight:500;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-weight:500}
+.inp{border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:9px 12px;width:100%}
+.inp:focus{outline:0;border-color:var(--accent)}
+.dropzone{border:1.5px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+.callout{border:1px solid var(--warn);border-radius:10px;padding:10px 14px;background:var(--panel2)}
+.callout.ok{border-color:var(--ok)}
+.pal .inp{border-radius:12px;font-size:16px}
+.pal ul{list-style:none;margin:8px 0 0;padding:0;max-height:48vh;overflow:auto}
+.pal li button{width:100%;text-align:left;border:0;background:transparent;padding:9px 12px;border-radius:9px;cursor:pointer;display:flex;gap:10px;align-items:center}
+.pal li button:hover,.pal li button.act{background:var(--hl)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:var(--cta-bg);color:var(--cta-fg);padding:9px 16px;border-radius:10px;box-shadow:var(--shadow);animation:rise .2s both}
+.progress{height:8px;background:var(--line);border-radius:9px;overflow:hidden}.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+
+/* sign in */
+.signin{min-height:100%;display:grid;grid-template-columns:1.1fr 1fr}
+.signin .l{background:var(--cta-bg);color:var(--cta-fg);padding:56px;display:flex;flex-direction:column;justify-content:space-between;gap:32px}
+.signin .l h1{font-size:clamp(34px,5vw,58px);line-height:1}
+.signin .l .code{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:inherit;padding:12px 0}
+.signin .l .code .ln i{color:inherit;opacity:.5}
+.signin .r{display:grid;place-items:center;padding:32px}
+.signin form{width:min(380px,100%);display:flex;flex-direction:column;gap:14px}
+.cite-demo{display:inline-block;background:var(--hl);color:inherit;padding:0 4px;border-radius:3px}
+.slider{width:100%;accent-color:var(--accent)}
+.back{display:flex;align-items:center;gap:6px;padding:4px 8px;color:var(--muted);text-decoration:none;font-weight:500;border-radius:8px}
+.back:hover{color:var(--ink);background:var(--panel2)}
+.crumblink{color:var(--muted);text-decoration:none}.crumblink:hover{color:var(--ink);text-decoration:underline}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.qcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;max-width:100%;overflow:hidden;text-align:left}
+.qcard pre{margin:4px 0 0;font:12px/1.5 var(--mono);white-space:pre-wrap;max-height:92px;overflow:hidden}
+.selpop{position:fixed;z-index:55;width:340px;max-width:calc(100vw - 24px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px -12px rgba(0,0,0,.45);padding:12px;display:flex;flex-direction:column;gap:10px;animation:rise .15s both}
+.selpop[hidden]{display:none}
+.sp-q{display:flex;flex-direction:column;gap:2px;background:var(--panel2);border-radius:9px;padding:7px 10px}
+.sp-t{font:12px/1.45 var(--mono);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sp-row{display:flex;gap:6px}
+.selectable ::selection,.selectable::selection{background:var(--accent);color:var(--accent-ink)}
+.accgrid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;align-items:start}
+.arows{display:flex;flex-direction:column;max-height:60vh;overflow:auto}
+.arow{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;border:0;background:transparent;cursor:pointer;text-align:left;width:100%}
+.arow:hover{background:var(--panel2)}.arow.sel{background:var(--hl)}
+.arow .ic{width:15px;height:15px;color:var(--muted)}.arow .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:1px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 12px;cursor:pointer}
+.opt span{color:var(--muted);font-size:12.5px}.opt:hover:not([disabled]){border-color:var(--muted)}
+.opt.on{background:var(--hl);border-color:var(--accent)}.opt[disabled]{opacity:.55;cursor:not-allowed}
+.chip .x{border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:3px;border-radius:50%;color:inherit}
+.chip .x .ic{width:12px;height:12px}.chip .x:hover{background:rgba(0,0,0,.12)}
+.cell{width:30px;height:30px;border-radius:9px;border:1.5px solid var(--line);background:transparent;display:inline-grid;place-items:center;cursor:pointer;color:var(--accent-ink)}
+.cell.on{background:var(--accent);border-color:transparent}.cell.dis{cursor:default;opacity:.55}.cell .ic{width:16px;height:16px}
+.cell:not(.on):not(.dis):hover{border-color:var(--muted)}
+.cell.part{background:var(--hl);border-color:var(--accent);color:var(--ink)}
+.x2{border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:2px;border-radius:6px;color:var(--muted)}.x2:hover{background:var(--panel2);color:var(--ink)}.x2 .ic{width:14px;height:14px;transition:transform .15s}.x2[aria-expanded="true"] .ic{transform:rotate(90deg)}
+.mxh{text-align:center;vertical-align:bottom;white-space:nowrap}.mxh small{display:block;font-weight:400;text-transform:none;letter-spacing:0;font-family:var(--body)}
+.rulegrid td:first-child{min-width:220px}
+.avs{display:flex}.avs .av{margin-left:-6px;border:2px solid var(--panel);width:24px;height:24px;font-size:10px}.avs .av:first-child{margin-left:0}
+
+@media (max-width:1100px){.accgrid{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g32,.g2{grid-template-columns:1fr}.graphwrap{grid-template-columns:1fr}.chat.withsrc{grid-template-columns:0 minmax(0,1fr) minmax(300px,420px)}.chat.withsrc .convs{display:none}}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .side{flex-direction:row;align-items:center;overflow-x:auto;padding:8px 12px;border-right:0;border-bottom:1px solid var(--line)}
+  .side .proj,.side .quota,.side .nav .sec{display:none}.nav{flex-direction:row}.nav a span{display:none}
+  .top{padding:8px 14px}.pill-search{min-width:0}.pill-search span{display:none}.crumb{display:none}
+  #view{padding:18px 16px 40px}.split{grid-template-columns:1fr;height:auto}.filetree{max-height:260px}
+  .chat{grid-template-columns:1fr}.convs{display:none}.chat.withsrc{grid-template-columns:1fr}.chat.withsrc .thread{display:none}
+  .starters{grid-template-columns:1fr}.signin{grid-template-columns:1fr}.signin .l{padding:28px}
+  .pagehead h1{font-size:28px}.app.home,.app.bare{grid-template-rows:minmax(0,1fr)}.accgrid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" class="app">
+  <aside class="side" id="side"></aside>
+  <div class="main">
+    <header class="top" id="top"></header>
+    <div id="banner"></div>
+    <main id="view"></main>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ------------------------------------------------------------------ helpers */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const P={
+ grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+ graph:'<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7l8 1M7 8l4 8M17 10l-4 6"/>',
+ folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+ search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+ sliders:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+ lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+ file:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ send:'<path d="M4 12l16-8-6 16-3-7z"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+ up:'<path d="M7 11v9H4v-9zM7 11l4-8c2 0 3 1 3 3l-1 4h6a1.5 1.5 0 0 1 1.5 1.8l-1.3 6A2 2 0 0 1 17.3 20H7"/>',
+ refresh:'<path d="M20 6v5h-5M4 18v-5h5"/><path d="M6 9a7 7 0 0 1 12-1M18 15a7 7 0 0 1-12 1"/>',
+ bolt:'<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+ check:'<path d="M5 12l5 5 9-10"/>',
+ alert:'<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+ moon:'<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10z"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+ eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+ log:'<path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/>',
+ chev:'<path d="M9 6l6 6-6 6"/>',
+ back:'<path d="M15 6l-6 6 6 6"/>',
+ minus:'<path d="M6 12h12"/>',
+ pause:'<path d="M8 5v14M16 5v14"/>',
+ stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>'
+};
+const ic=(n,c='')=>`<svg class="ic ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;$('#toast').appendChild(e);setTimeout(()=>e.remove(),2600)}
+const HUES={admin:'#14201f',maya:'#2f8f8a',sam:'#b0577a',priya:'#4f6fb0'};
+const av=(u,s)=>`<span class="av" style="background:${u.id==='admin'?'#3a4a48':HUES[u.id]}" ${s?`title="${esc(u.name)}"`:''}>${u.name.split(' ').map(w=>w[0]).join('')}</span>`;
+const pad=n=>String(n).padStart(2,'0');
+const nowT=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
+
+/* ------------------------------------------------------------------ mock data (prototype only) */
+const USERS={
+ admin:{id:'admin',name:'Jordan Reyes',role:'Admin',admin:true},
+ maya:{id:'maya',name:'Maya Chen',role:'Member'},
+ sam:{id:'sam',name:'Sam Okafor',role:'Member'},
+ priya:{id:'priya',name:'Priya Nair',role:'Member'}
+};
+/* A rule sits on a folder or a file: v = everyone | people | admin. People rules list user ids. No rule means admins only. */
+const RULES={
+ 'README.md':{v:'everyone',p:[]},'docs/':{v:'everyone',p:[]},'docs/internal/':{v:'admin',p:[]},
+ 'requirements.txt':{v:'people',p:['maya','sam']},'src/':{v:'people',p:['maya','sam']},'tests/':{v:'people',p:['maya']},
+ 'infra/':{v:'people',p:['priya']},'infra/runbooks/payments-recovery.md':{v:'people',p:['priya','maya']}
+};
+const FILES=[
+ ['README.md',4],['requirements.txt',1],['docs/architecture.md',9],['docs/api.md',7],['docs/internal/roadmap-2027.md',3],['docs/internal/pricing-model.md',5],
+ ['src/main.py',3],['src/config.py',2],['src/db.py',2],['src/models.py',6],['src/api/orders.py',5],['src/api/payments.py',6],['src/api/auth.py',4],
+ ['src/services/checkout.py',7],['src/services/inventory.py',5],['src/services/notify.py',3],['src/utils/money.py',1],
+ ['tests/test_checkout.py',6],['tests/test_orders.py',4],['infra/docker-compose.yml',2],['infra/deploy.sh',2],['infra/runbooks/payments-recovery.md',2]
+].map(([p,c])=>({p,c}));
+const EDGES_RAW=[
+ ['src/main.py','src/api/orders.py'],['src/main.py','src/api/payments.py'],['src/main.py','src/api/auth.py'],['src/main.py','src/config.py'],['src/main.py','src/db.py'],
+ ['src/api/orders.py','src/services/checkout.py'],['src/api/orders.py','src/models.py'],['src/api/orders.py','src/services/inventory.py'],
+ ['src/api/payments.py','src/services/checkout.py'],['src/api/payments.py','src/config.py'],
+ ['src/api/auth.py','src/models.py'],['src/api/auth.py','src/db.py'],
+ ['src/services/checkout.py','src/models.py'],['src/services/checkout.py','src/utils/money.py'],['src/services/checkout.py','src/services/inventory.py'],['src/services/checkout.py','src/services/notify.py'],['src/services/checkout.py','src/db.py'],
+ ['src/services/inventory.py','src/models.py'],['src/services/inventory.py','src/db.py'],['src/services/notify.py','src/config.py'],
+ ['src/models.py','src/db.py'],['src/db.py','src/config.py'],
+ ['tests/test_checkout.py','src/services/checkout.py'],['tests/test_checkout.py','src/utils/money.py'],['tests/test_orders.py','src/api/orders.py'],['tests/test_orders.py','src/models.py']
+];
+const CODE={
+'src/services/checkout.py':`import stripe
+from src.db import session
+from src.models import Order, Cart
+from src.utils.money import to_minor_units
+from src.services import inventory, notify
+
+
+class PaymentDeclined(Exception):
+    pass
+
+
+def checkout(cart_id: str, payment_token: str) -> Order:
+    """Turn a cart into a paid order. Stock is reserved first so a decline can release it."""
+    with session() as db:
+        cart = db.get(Cart, cart_id)
+        inventory.reserve(db, cart.items)
+        total = to_minor_units(cart.total)
+        charge = stripe.PaymentIntent.create(amount=total, payment_method=payment_token, confirm=True)
+        if charge.status != "succeeded":
+            inventory.release(db, cart.items)
+            raise PaymentDeclined(charge.status)
+        order = Order(cart_id=cart.id, total=total, status="paid")
+        db.add(order)
+        db.commit()
+        notify.order_confirmation(order)
+        return order`,
+'src/config.py':`import os
+
+
+class Settings:
+    database_url = os.environ["DATABASE_URL"]
+    stripe_key = os.environ["STRIPE_API_KEY"]
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+    low_stock_threshold = int(os.getenv("LOW_STOCK", "5"))
+
+
+settings = Settings()`,
+'src/db.py':`from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from src.config import settings
+
+engine = create_engine(settings.database_url, pool_pre_ping=True)
+_Session = sessionmaker(engine)
+
+
+def session():
+    return _Session()`,
+'src/utils/money.py':`from decimal import Decimal, ROUND_HALF_UP
+
+
+def to_minor_units(amount: Decimal) -> int:
+    """Convert 12.34 to 1234. Stripe wants integers."""
+    cents = (amount * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return int(cents)`,
+'README.md':`# shop-api
+
+Small e-commerce backend: carts, orders, Stripe payments.
+
+## Run
+\`\`\`
+docker compose -f infra/docker-compose.yml up
+uvicorn src.main:app --reload
+\`\`\`
+
+## Layout
+- \`src/api\`: HTTP routes
+- \`src/services\`: business logic (checkout, inventory, notify)
+- \`tests\`: pytest suite`,
+'infra/runbooks/payments-recovery.md':`# Payments service recovery
+
+## When charges start failing
+1. Check the Stripe dashboard status and the payments error rate.
+2. If only this service is failing, restart it: ./infra/deploy.sh restart payments
+3. Confirm STRIPE_API_KEY is set in the running container.
+
+## If orders are stuck in "pending"
+1. Run the reconcile job: python -m src.services.checkout reconcile
+2. Stock held by failed checkouts is released after 15 minutes.
+
+## Escalate
+Page the on-call engineer if errors persist for more than 10 minutes.`,
+'docs/internal/roadmap-2027.md':`# Roadmap 2027
+
+## Q1
+- Multi-currency checkout
+- Saved payment methods
+
+## Q2
+- Marketplace sellers`
+};
+function codeFor(p){
+ if(CODE[p]) return CODE[p];
+ if(p.endsWith('.py')){
+  const imps=EDGES_RAW.filter(e=>e[0]===p).map(e=>'from '+e[1].replace(/\.py$/,'').replace(/\//g,'.')+' import *');
+  return ['"""'+p+'"""',...imps,'','','def handler():','    ...'].join('\n');
+ }
+ return '# '+p+'\n\n(Shortened in this prototype. The real viewer renders the whole file.)';
+}
+const SEARCH_INDEX=[
+ ['src/services/checkout.py','12-23','inventory.reserve(db, cart.items); total = to_minor_units(cart.total); charge = stripe.PaymentIntent.create(...) for the payment'],
+ ['src/api/payments.py','8-21','POST /payments/webhook verifies the Stripe signature, marks the order paid, handles payment_intent.payment_failed'],
+ ['src/config.py','4-6','database_url, stripe_key = os.environ["STRIPE_API_KEY"], redis_url'],
+ ['src/utils/money.py','3-6','to_minor_units converts 12.34 to 1234 for payment amounts'],
+ ['src/services/notify.py','5-18','order_confirmation sends an email after the payment succeeded; low stock alert'],
+ ['tests/test_checkout.py','10-34','test_declined_payment_releases_stock, test_checkout_creates_paid_order for payment'],
+ ['docs/architecture.md','20-41','Payment flow: checkout reserves stock, charges through Stripe, confirms by webhook'],
+ ['infra/runbooks/payments-recovery.md','3-11','When charges start failing: check Stripe status, restart payments, reconcile stuck orders'],
+ ['docs/internal/pricing-model.md','1-18','Payment fees assumptions and margin per order, internal pricing model'],
+ ['src/api/orders.py','14-30','POST /orders calls checkout and returns the order id; GET /orders/{id}'],
+ ['infra/deploy.sh','6-22','deploy and restart commands for the payments and orders services']
+];
+const STACK=[['FastAPI','src/main.py'],['SQLAlchemy','src/db.py'],['Stripe SDK','requirements.txt'],['Docker Compose','infra/docker-compose.yml'],['pytest','tests/test_checkout.py']];
+const ENVV=[['DATABASE_URL','','src/config.py',4],['STRIPE_API_KEY','','src/config.py',5],['REDIS_URL','redis://localhost:6379','src/config.py',6],['LOW_STOCK','5','src/config.py',7]];
+const TODOS=[['src/services/inventory.py',41,'TODO: handle partial reservations'],['src/api/auth.py',18,'FIXME: token expiry is hard-coded to 24h'],['infra/deploy.sh',12,'HACK: sleep 5 until the database is up'],['docs/api.md',30,'TODO: document pagination']];
+const ANSWERS=[
+ {k:/checkout|cart|order flow/i,gate:.89,text:"`checkout()` in `src/services/checkout.py` turns a cart into a paid order in four steps:\n1. Reserves stock for every cart item first, so a decline can release it.\n2. Converts the total to whole minor units with `to_minor_units`, because Stripe wants integers.\n3. Charges the payment through Stripe. A failed charge releases the stock and raises `PaymentDeclined`.\n4. On success it saves an order with status `paid` and sends a confirmation.",src:[['src/services/checkout.py',12,23],['src/utils/money.py',3,6]]},
+ {k:/database_url|database|db url/i,gate:.91,text:"`DATABASE_URL` is read once, in `src/config.py`, as `Settings.database_url`. `src/db.py` passes it to `create_engine` with `pool_pre_ping` on, and every service gets a session from there. To point the app at another database, set the variable before it starts.",src:[['src/config.py',4,4],['src/db.py',5,5]]},
+ {k:/recover|payments service|runbook|charges/i,gate:.86,text:"To recover the payments service:\n1. Check the Stripe dashboard status and the payments error rate.\n2. If only this service is failing, restart it with `./infra/deploy.sh restart payments`.\n3. Confirm `STRIPE_API_KEY` is set in the running container.\nIf orders are stuck in pending, run the reconcile job. Held stock is released after 15 minutes. Page the on-call engineer if errors last more than 10 minutes.",src:[['infra/runbooks/payments-recovery.md',3,11]]},
+ {k:/readme|summar/i,gate:.88,text:"shop-api is a small e-commerce backend covering carts, orders and Stripe payments. Start it with Docker Compose from `infra/`, then run the API with uvicorn. Routes live in `src/api`, business logic in `src/services`.",src:[['README.md',1,14]]},
+ {k:/roadmap|2027|q1|q2/i,gate:.84,text:"The 2027 roadmap lists multi-currency checkout and saved payment methods for Q1, and marketplace sellers for Q2.",src:[['docs/internal/roadmap-2027.md',3,8]]}
+];
+const REFUSAL="I couldn't find relevant information in this project to answer that question.";
+const STARTERS=[
+ ['What does checkout() in checkout.py do?','src/services/checkout.py'],
+ ['How is DATABASE_URL used?','src/config.py'],
+ ['How do I recover the payments service?','infra/runbooks/payments-recovery.md'],
+ ['Summarise the README','README.md'],
+ ['What is on the 2027 roadmap?','docs/internal/roadmap-2027.md']
+];
+
+/* ------------------------------------------------------------------ state + permissions */
+const S={role:'admin',src:null,sel:'src/services/checkout.py',graphSel:null,conv:{},chats:{},streaming:null,fb:{},
+ accessTab:'folder',accSel:'src/',mxOpen:[],accUser:'maya',pending:null,setTab:'providers',searchQ:'payment',searchF:'all',searchSem:false,gate:.82,rerank:false,scope:'',
+ audit:[['10:42','Priya Nair','How do I rotate the Stripe key?',[],'Refused'],['10:31','Maya Chen','How is DATABASE_URL used?',['src/config.py','src/db.py'],'Answered'],['09:58','Sam Okafor','What is on the 2027 roadmap?',[],'Refused'],['09:40','Jordan Reyes','What does checkout() in checkout.py do?',['src/services/checkout.py','src/utils/money.py'],'Answered']]};
+const U=()=>USERS[S.role];
+function ruleKey(p){let best='';for(const k in RULES){const hit=k.endsWith('/')?p.startsWith(k):p===k;if(hit&&k.length>best.length)best=k}return best}
+function ruleFor(p){const k=ruleKey(p);return k?RULES[k]:{v:'admin',p:[]}}
+function canReadAs(u,p){if(u.admin)return true;const r=ruleFor(p);return r.v==='everyone'||(r.v==='people'&&r.p.includes(u.id))}
+function ruleLabel(r){return r.v==='everyone'?'Everyone':r.v==='admin'?'Only admins':r.p.length+(r.p.length===1?' person':' people')}
+const canRead=p=>canReadAs(U(),p);
+const vis=()=>FILES.filter(f=>canRead(f.p));
+const lang=p=>p.endsWith('.py')?'Python':p.endsWith('.md')?'Markdown':p.endsWith('.sh')?'Shell':'Config';
+const LCOL={Python:'var(--g-api)',Markdown:'var(--g-svc)',Config:'var(--g-core)',Shell:'var(--g-util)'};
+function grp(p){return p.startsWith('tests/')?'test':p.startsWith('src/api/')?'api':p.startsWith('src/services/')?'svc':p.startsWith('src/utils/')?'util':'core'}
+function highlight(line){
+ return esc(line).replace(/(#.*$)|("[^"]*"|'[^']*')|\b(def|class|import|from|return|if|else|raise|with|not|None|True|False|pass)\b|(\b\d+\b)/g,(m,c,s,k,n)=>c?`<span class="tk-c">${m}</span>`:s?`<span class="tk-s">${m}</span>`:k?`<span class="tk-k">${m}</span>`:`<span class="tk-n">${m}</span>`);
+}
+function codeBlock(p,a,b){
+ return `<div class="code selectable" data-p="${esc(p)}" role="region" aria-label="${esc(p)}">`+codeFor(p).split('\n').map((l,i)=>`<div class="ln ${a&&i+1>=a&&i+1<=b?'hl':''}"><i>${i+1}</i><span>${highlight(l)||' '}</span></div>`).join('')+'</div>';
+}
+function md(t){
+ const inl=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+ let out='',ol=false;
+ for(const l of t.split('\n')){const m=l.match(/^(\d+)\. (.*)/);
+  if(m){if(!ol){out+='<ol>';ol=true}out+='<li>'+inl(m[2])+'</li>'}else{if(ol){out+='</ol>';ol=false}if(l.trim())out+='<p>'+inl(l)+'</p>'}}
+ return out+(ol?'</ol>':'');
+}
+
+/* ------------------------------------------------------------------ shell */
+const NAV=[['dashboard','grid','Dashboard'],['graph','graph','Dependency map'],['files','folder','Files'],['search','search','Search'],['chat','chat','Chat']];
+const route=()=>{const r=location.hash.slice(1);return ['signin','projects','dashboard','graph','files','search','chat','access','settings'].includes(r)?r:'projects'};
+function shell(r){
+ const u=U(),home=r==='projects';
+ $('#app').classList.toggle('bare',r==='signin');
+ $('#app').classList.toggle('home',home);
+ const who=`<div class="who" title="Preview the app as another user"><label class="muted" for="roleSel" style="font-size:12px">${u.admin?'Signed in as':'Previewing as'}</label>${av(u)}
+   <select id="roleSel" data-a="role">${Object.values(USERS).map(x=>`<option value="${x.id}" ${x.id===S.role?'selected':''}>${x.name}${x.admin?' (admin)':''}</option>`).join('')}</select></div>`;
+ const theme=`<button class="iconbtn" data-a="theme" aria-label="Toggle theme">${ic('sun')}</button>`;
+ const pill=`<button class="pill-search" data-a="palette">${ic('search')}<span>Jump to a file, symbol or page</span><span class="kbd">Ctrl K</span></button>`;
+ $('#side').innerHTML=`
+  <a class="brand" href="#projects"><span class="logo">&lt;/&gt;</span>DevDocs</a>
+  <a class="back" href="#projects">${ic('back')}All projects</a>
+  <div class="proj"><span class="dot"></span><span style="flex:1"><b>shop-api</b><small>from GitHub · synced 2 h ago</small></span></div>
+  <nav class="nav" aria-label="Project">
+   <div class="sec">Workspace</div>
+   ${NAV.map(([id,i,l])=>`<a href="#${id}" ${r===id?'aria-current="page"':''}>${ic(i)}<span>${l}</span></a>`).join('')}
+   ${u.admin?`<div class="sec">Admin</div>
+   <a href="#access" ${r==='access'?'aria-current="page"':''}>${ic('shield')}<span>Access</span><em class="tag">admin</em></a>
+   <a href="#settings" ${r==='settings'?'aria-current="page"':''}>${ic('sliders')}<span>Settings</span></a>`:''}
+  </nav>
+  <div class="quota" aria-label="Free-tier usage">
+   <div class="meter"><small><span>Embedding calls today</span><span>312 / 1,000</span></small><div class="bar"><i class="ok" style="width:31%"></i></div></div>
+   <div class="meter"><small><span>Chat tokens / min</span><span>3.2k / 8k</span></small><div class="bar"><i style="width:40%"></i></div></div>
+  </div>`;
+ const names={dashboard:'Dashboard',graph:'Dependency map',files:'Files',search:'Search',chat:'Chat',access:'Access',settings:'Settings'};
+ $('#top').innerHTML=home
+  ?`<a class="brand" href="#projects" style="padding:0"><span class="logo">&lt;/&gt;</span>DevDocs</a>${pill}${who}${theme}`
+  :`<div class="crumb"><a class="crumblink" href="#projects">Projects</a><span>/</span><span>shop-api</span><span>/</span><b>${names[r]||''}</b></div>${pill}${who}${theme}`;
+ $('#banner').innerHTML=u.admin?'':`<div class="bn">${ic('eye')}<span><b>Previewing as ${esc(u.name)}</b>. You see only the ${vis().length} of ${FILES.length} files they can read. Admin pages are hidden.</span><button class="btn sm" data-a="role-admin">Back to admin</button></div>`;
+}
+
+/* ------------------------------------------------------------------ pages */
+function pSignin(){
+ return `<div class="signin"><div class="l"><div class="brand"><span class="logo" style="background:var(--accent);color:var(--accent-ink)">&lt;/&gt;</span>DevDocs</div>
+  <div><h1>Ask the project.<br>See the <span class="cite-demo" style="color:var(--accent-ink);background:var(--accent)">exact lines</span>.</h1>
+  <p style="max-width:44ch;opacity:.8;margin-top:16px">Answers come only from files you are allowed to read, and every claim links to where it came from.</p></div>
+  <div class="code" aria-hidden="true"><div class="ln"><i>12</i><span>    inventory.reserve(db, cart.items)</span></div><div class="ln hl" style="background:rgba(245,200,75,.18)"><i>13</i><span>    total = to_minor_units(cart.total)</span></div><div class="ln hl" style="background:rgba(245,200,75,.18)"><i>14</i><span>    charge = stripe.PaymentIntent.create(...)</span></div></div></div>
+  <div class="r"><form data-a="signin-form"><div><span class="eyebrow">First run</span><h2 style="font-size:28px;margin-top:4px">Create the admin account</h2><p class="muted" style="margin:6px 0 0">This account can read every file and manage people and access. Others are added later from the Access page.</p></div>
+   <div class="field"><label for="em">Email</label><input id="em" class="inp" type="email" value="jordan@example.com" autocomplete="username"></div>
+   <div class="field"><label for="pw">Password</label><input id="pw" class="inp" type="password" value="correct horse battery" autocomplete="new-password"><small class="muted">At least 12 characters. Stored hashed.</small></div>
+   <button class="btn pri" type="submit" style="justify-content:center">Create admin and continue</button>
+   <p class="muted" style="margin:0;font-size:12.5px;text-align:center">Already set up? <a href="#projects">Sign in</a></p></form></div></div>`;
+}
+function pProjects(){
+ const u=U(),n=vis().length;
+ const card=(id,name,desc,chip,body,meta)=>`<article class="card pcard" data-a="${id==='shop'?'goto':'toast'}" data-v="${id==='shop'?'dashboard':'Prototype: only shop-api is wired up'}" tabindex="0" aria-label="Open ${name}"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h3>${name}</h3>${chip}</div><div class="muted">${desc}</div>${body}<div class="meta">${meta}</div></article>`;
+ const cards=[card('shop','shop-api','Carts, orders and Stripe payments','<span class="chip ok"><span class="dot"></span>Ready</span>',
+  `<div class="langbar"><i style="width:74%;background:var(--g-api)"></i><i style="width:14%;background:var(--g-svc)"></i><i style="width:12%;background:var(--g-core)"></i></div><div class="legend"><span><s style="background:var(--g-api)"></s>Python 74%</span><span><s style="background:var(--g-svc)"></s>Markdown 14%</span></div>`,
+  u.admin?`${FILES.length} files · 62 chunks · synced 2 hours ago`:`You can read ${n} of ${FILES.length} files · synced 2 hours ago`)];
+ if(u.admin){
+  cards.push(card('docs','docs-site','Marketing and docs website','<span class="chip warn">'+ic('pause')+'Paused</span>',
+   `<div><div class="progress"><i style="width:39%"></i></div><p class="muted" style="margin:8px 0 0">12 of 31 files embedded. The daily embedding quota is used up. Processing resumes about 14:30. Nothing failed.</p></div>`,'31 files · waiting for quota'));
+  cards.push(card('mob','mobile-app','React Native client','<span class="chip info">'+ic('refresh')+'Re-index</span>',
+   `<p class="muted" style="margin:0">Embedding settings changed, so this index is out of date. Re-index to chat again. Stored chunks are reused, nothing is re-chunked.</p>`,'58 files · index out of date'));
+  cards.push(`<article class="card pcard newcard" data-a="modal-new" tabindex="0">${ic('plus')}<b style="color:var(--ink)">Import a repository</b><span>Paste a GitHub URL and start chatting</span></article>`);
+ }
+ return `<div class="pagehead"><div><span class="eyebrow">${u.admin?'Workspace · 3 projects':'Workspace · projects shared with you'}</span><h1>Your <span class="mark">projects</span></h1><p>Open a project for its dashboard, dependency map, files, search and chat. Each project is its own index.</p></div>
+  ${u.admin?`<div class="acts"><button class="btn pri" data-a="modal-new">${ic('plus')}New project</button></div>`:''}</div>
+ <div class="pcards">${cards.join('')}</div>`;
+}
+function pDashboard(){
+ const v=vis(),chunks=v.reduce((n,f)=>n+f.c,0),u=U();
+ const by={};v.forEach(f=>{const l=lang(f.p);by[l]=(by[l]||0)+1});
+ const total=v.length||1;
+ const stack=STACK.filter(s=>canRead(s[1]));
+ const env=ENVV.filter(e=>canRead(e[2])),todo=TODOS.filter(t=>canRead(t[0]));
+ return `<div class="pagehead"><div><span class="eyebrow">shop-api · github.com/example/shop-api · main @ 3f9c1a2</span><h1>What is in <span class="mark">this project</span></h1>
+  <p>Built from the index, without calling the AI. ${u.admin?'Showing every file.':`Showing only the ${v.length} files ${esc(u.name.split(' ')[0])} can read.`}</p></div>
+  <div class="acts"><button class="btn" data-a="toast" data-v="Checked GitHub: 2 files changed, 2 re-embedded">${ic('refresh')}Check for updates</button><a class="btn pri" href="#chat">${ic('chat')}Ask a question</a></div></div>
+ <div class="grid g4" style="margin-bottom:16px">
+  <div class="card tile"><b>${v.length}</b><span>files you can read</span></div>
+  <div class="card tile"><b>${chunks}</b><span>searchable chunks</span></div>
+  <div class="card tile"><b>${Object.keys(by).length}</b><span>languages</span></div>
+  <div class="card tile"><b style="color:var(--ok)">Ready</b><span>index up to date</span></div></div>
+ <div class="grid g32" style="margin-bottom:16px">
+  <div class="card"><h3>File map <span class="muted" style="font-weight:400;font-family:var(--body);font-size:13px">sized by chunks, click to open</span></h3>
+   ${v.length?`<div class="tree-map">${[...v].sort((a,b)=>b.c-a.c).map(f=>`<button class="tm" style="flex-grow:${f.c};background:var(--g-${grp(f.p)==='test'?'test':grp(f.p)})" data-a="file" data-v="${f.p}" title="${f.p}">${f.p.split('/').pop()}<small>${f.c} chunks</small></button>`).join('')}</div>`:'<div class="empty">Nothing readable yet.</div>'}
+   <div class="langbar" style="margin-top:16px">${Object.entries(by).map(([l,n])=>`<i style="width:${n/total*100}%;background:${LCOL[l]}"></i>`).join('')}</div>
+   <div class="legend">${Object.entries(by).map(([l,n])=>`<span><s style="background:${LCOL[l]}"></s>${l} ${Math.round(n/total*100)}%</span>`).join('')}</div></div>
+  <div class="card"><h3>Detected stack</h3><div class="row" style="margin-bottom:16px">${stack.map(s=>`<span class="chip">${s[0]}</span>`).join('')||'<span class="muted">Nothing detected in files you can read.</span>'}</div>
+   <h3>Entry point</h3>${canRead('src/main.py')?`<button class="cite" data-a="src" data-v="src/main.py|1|3">src/main.py</button><p class="muted" style="margin:6px 0 0">Start with <code class="mono">uvicorn src.main:app</code></p>`:'<span class="muted">Not visible to you.</span>'}</div></div>
+ <div class="grid g2" style="margin-bottom:16px">
+  <div class="card"><h3>Environment variables <span class="chip">${env.length} found</span></h3><div class="tw"><table><thead><tr><th>Name</th><th>Default</th><th>Defined in</th></tr></thead><tbody>
+   ${env.map(e=>`<tr><td class="path">${e[0]}</td><td class="path muted">${e[1]||'required'}</td><td><button class="cite" data-a="src" data-v="${e[2]}|${e[3]}|${e[3]}">${e[2]}:${e[3]}</button></td></tr>`).join('')||'<tr><td colspan="3" class="muted">None in files you can read.</td></tr>'}</tbody></table></div></div>
+  <div class="card"><h3>To-do and fix-me notes <span class="chip">${todo.length}</span></h3>
+   ${todo.map(t=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line);flex-wrap:nowrap"><span class="chip ${/FIXME|HACK/.test(t[2])?'warn':''}">${t[2].split(':')[0]}</span><span style="flex:1;min-width:0">${esc(t[2].split(': ').slice(1).join(': '))}<br><span class="path muted">${t[0]}:${t[1]}</span></span></div>`).join('')||'<span class="muted">None in files you can read.</span>'}</div></div>
+ ${u.admin?`<div class="card"><h3>${ic('bolt')}Insights from questions and ratings <span class="chip">admin only</span></h3>
+  <div class="grid g4"><div><b class="mono" style="font-size:22px">82%</b><br><span class="muted">answers rated helpful</span></div><div><b class="mono" style="font-size:22px">14</b><br><span class="muted">citations of checkout.py</span></div>
+  <div style="grid-column:span 2"><span class="muted">Questions refused this week (documentation gaps)</span><br>“How do I rotate the Stripe key?” ×3 · “What is the refund policy?” ×2</div></div></div>`:''}`;
+}
+/* graph */
+function layoutGraph(nodes,edges,W,H){
+ nodes.forEach((n,i)=>{const a=i/nodes.length*Math.PI*2;n.x=W/2+Math.cos(a)*240;n.y=H/2+Math.sin(a)*170;n.vx=0;n.vy=0});
+ for(let it=0;it<340;it++){const k=1-it/360;
+  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const A=nodes[i],B=nodes[j];let dx=A.x-B.x,dy=A.y-B.y;const d2=dx*dx+dy*dy+.01,d=Math.sqrt(d2),f=11000/d2;A.vx+=dx/d*f;A.vy+=dy/d*f;B.vx-=dx/d*f;B.vy-=dy/d*f}
+  edges.forEach(e=>{const A=e.s,B=e.t;const dx=B.x-A.x,dy=B.y-A.y,d=Math.sqrt(dx*dx+dy*dy)+.01,f=(d-120)*.02;A.vx+=dx/d*f;A.vy+=dy/d*f;B.vx-=dx/d*f;B.vy-=dy/d*f});
+  nodes.forEach(n=>{n.vx+=(W/2-n.x)*.004;n.vy+=(H/2-n.y)*.007;n.x+=n.vx*k;n.y+=n.vy*k;n.vx*=.6;n.vy*=.6;n.x=Math.max(70,Math.min(W-70,n.x));n.y=Math.max(36,Math.min(H-36,n.y))})}
+}
+function graphData(){
+ const nodes=FILES.filter(f=>/^(src|tests)\/.*\.py$/.test(f.p)&&canRead(f.p)).map(f=>({p:f.p,c:f.c,g:grp(f.p)}));
+ const by=Object.fromEntries(nodes.map(n=>[n.p,n]));
+ const edges=EDGES_RAW.filter(e=>by[e[0]]&&by[e[1]]).map(e=>({s:by[e[0]],t:by[e[1]]}));
+ layoutGraph(nodes,edges,900,540);return{nodes,edges};
+}
+function graphSVG(sel,mini){
+ const {nodes,edges}=graphData();
+ if(!nodes.length)return '<div class="empty"><h3>No source files in your scope</h3><span>The dependency map only draws files you can read.</span></div>';
+ const nb=new Set();if(sel){edges.forEach(e=>{if(e.s.p===sel)nb.add(e.t.p);if(e.t.p===sel)nb.add(e.s.p)});nb.add(sel)}
+ return `<svg viewBox="0 0 900 540" role="img" aria-label="Import graph of ${nodes.length} files"><defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L8 4L0 8z" fill="var(--muted)"/></marker></defs>
+ ${edges.map(e=>{const hot=sel&&(e.s.p===sel||e.t.p===sel);return `<line class="gedge ${hot?'hot':sel?'dim':''}" x1="${e.s.x.toFixed(1)}" y1="${e.s.y.toFixed(1)}" x2="${e.t.x.toFixed(1)}" y2="${e.t.y.toFixed(1)}" ${mini?'':'marker-end="url(#ar)"'}/>`}).join('')}
+ ${nodes.map(n=>{const r=7+Math.sqrt(n.c)*2.2;return `<g class="gnode ${sel&&!nb.has(n.p)?'dim':''}" ${mini?'':`data-a="gnode" data-v="${n.p}" tabindex="0" role="button" aria-label="${n.p}"`}><circle cx="${n.x.toFixed(1)}" cy="${n.y.toFixed(1)}" r="${r.toFixed(1)}" fill="var(--g-${n.g})" stroke="${n.p===sel?'var(--accent)':'var(--panel)'}" stroke-width="${n.p===sel?4:2}"/>${mini?'':`<text x="${n.x.toFixed(1)}" y="${(n.y+r+13).toFixed(1)}" text-anchor="middle">${n.p.split('/').pop()}</text>`}</g>`}).join('')}</svg>`;
+}
+function pGraph(){
+ const {nodes,edges}=graphData();const s=S.graphSel&&nodes.find(n=>n.p===S.graphSel)?S.graphSel:null;
+ const imp=s?edges.filter(e=>e.s.p===s).map(e=>e.t.p):[],by=s?edges.filter(e=>e.t.p===s).map(e=>e.s.p):[];
+ return `<div class="pagehead"><div><span class="eyebrow">${nodes.length} files · ${edges.length} imports · parsed from source, no AI used</span><h1>How the code <span class="mark">connects</span></h1><p>Bigger circles hold more chunks. Click a file to see what it imports and what imports it.</p></div></div>
+ <div class="graphwrap"><div class="canvas">${graphSVG(s,false)}<div class="legend-float"><span><s style="background:var(--g-core)"></s>core</span><span><s style="background:var(--g-api)"></s>api</span><span><s style="background:var(--g-svc)"></s>services</span><span><s style="background:var(--g-util)"></s>utils</span><span><s style="background:var(--g-test)"></s>tests</span></div></div>
+ <aside class="card">${s?`<span class="eyebrow">Selected</span><h3 class="path" style="margin:4px 0 12px;word-break:break-all;font-family:var(--mono);font-size:14px">${s}</h3>
+  <p class="muted" style="margin:0 0 6px">Imports ${imp.length}</p><div class="row" style="margin-bottom:12px">${imp.map(p=>`<button class="chip" data-a="gnode" data-v="${p}">${p.split('/').pop()}</button>`).join('')||'<span class="muted">nothing</span>'}</div>
+  <p class="muted" style="margin:0 0 6px">Imported by ${by.length}</p><div class="row" style="margin-bottom:16px">${by.map(p=>`<button class="chip" data-a="gnode" data-v="${p}">${p.split('/').pop()}</button>`).join('')||'<span class="muted">nothing</span>'}</div>
+  <div class="row"><button class="btn sm" data-a="file" data-v="${s}">Open file</button><button class="btn pri sm" data-a="ask-file" data-v="${s}">${ic('chat')}Ask about this file</button></div>`
+  :`<h3>Nothing selected</h3><p class="muted">Pick a circle to trace dependencies. This is the fastest way to answer "what breaks if I change this?"</p>`}</aside></div>`;
+}
+/* files */
+function treeRows(){
+ const v=vis(),rows=[],seen=new Set();
+ v.map(f=>f.p).sort().forEach(p=>{const parts=p.split('/');
+  for(let i=0;i<parts.length-1;i++){const d=parts.slice(0,i+1).join('/');if(!seen.has(d)){seen.add(d);rows.push({d:1,p:d,depth:i})}}
+  rows.push({d:0,p,depth:parts.length-1})});
+ return rows;
+}
+function pFiles(){
+ const u=U(),v=vis();if(!canRead(S.sel))S.sel=v[0]?.p;
+ const f=FILES.find(x=>x.p===S.sel);
+ return `<div class="pagehead"><div><span class="eyebrow">${v.length} files${u.admin?'':' you can read'} · all ready</span><h1>Browse <span class="mark">files</span></h1></div>
+  <div class="acts"><button class="btn" data-a="modal-new">${ic('plus')}Add files</button></div></div>
+ <div class="split"><div class="card filetree" style="padding:8px">${treeRows().map(r=>r.d?`<div class="ftrow" style="padding-left:${8+r.depth*14}px;cursor:default">${ic('folder')}<span class="n">${r.p.split('/').pop()}</span>${u.admin&&ruleFor(r.p+'/').v!=='everyone'?ic('lock'):''}</div>`
+   :`<button class="ftrow ${r.p===S.sel?'sel':''}" style="padding-left:${8+r.depth*14}px" data-a="file" data-v="${r.p}">${ic('file')}<span class="n">${r.p.split('/').pop()}</span><span class="chip ok" style="padding:0 7px;font-size:11px">ready</span></button>`).join('')||'<div class="empty">No files available to you.</div>'}</div>
+  <div class="card" style="min-width:0">${f?`<div class="row" style="margin-bottom:12px"><h3 class="path" style="margin:0;font-family:var(--mono);font-size:14px;flex:1;min-width:0;word-break:break-all">${f.p}</h3><span class="chip">${lang(f.p)}</span><span class="chip">${f.c} chunks</span><span class="chip mono">sha 3f9c1a</span></div>
+   ${u.admin?`<div class="row" style="margin-bottom:12px"><span class="muted">Readable by</span>${accessChips(f.p)}<a class="btn sm ghost" href="#access">Edit rule</a></div>`:''}
+   <div class="row" style="margin-bottom:12px"><button class="btn pri sm" data-a="ask-file" data-v="${f.p}">${ic('chat')}Ask about this file</button><button class="btn sm" data-a="toast" data-v="Explanation generated once, then cached until the file changes">${ic('bolt')}Explain this file</button></div>
+   <p class="muted" style="margin:0 0 8px;font-size:12.5px">Select any lines or text to ask about just that.</p>${codeBlock(f.p)}`:'<div class="empty"><h3>Nothing to show</h3></div>'}</div></div>`;
+}
+/* search */
+function searchResults(){
+ const q=S.searchQ.trim().toLowerCase().split(/\s+/).filter(Boolean);
+ return SEARCH_INDEX.filter(r=>canRead(r[0])).filter(r=>{const l=lang(r[0]);return S.searchF==='all'||S.searchF===l}).filter(r=>q.every(w=>(r[0]+' '+r[2]).toLowerCase().includes(w)));
+}
+function hiq(t){const q=S.searchQ.trim().split(/\s+/).filter(Boolean);let o=esc(t);q.forEach(w=>{o=o.replace(new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:var(--hl);color:inherit;border-radius:3px">$1</mark>')});return o}
+function resultsHTML(){
+ const r=searchResults();
+ return `<p class="muted" style="margin:0 0 12px">${r.length} result${r.length===1?'':'s'} · ${S.searchSem?'keyword + meaning, 1 embedding call':'keyword search, no AI quota used'} · ${U().admin?'all files':'files you can read'}</p>`+
+ (r.length?r.map(x=>`<div class="card" style="margin-bottom:10px;padding:14px"><div class="row" style="flex-wrap:nowrap"><button class="cite" data-a="src" data-v="${x[0]}|${x[1].split('-')[0]}|${x[1].split('-')[1]}">${x[0]}:${x[1]}</button><span class="chip">${lang(x[0])}</span><button class="btn sm ghost" style="margin-left:auto" data-a="ask-file" data-v="${x[0]}">${ic('chat')}Ask about this</button></div><p style="margin:8px 0 0">${hiq(x[2])}</p></div>`).join(''):`<div class="empty"><h3>No matches</h3><span>Try fewer words, or turn on meaning search.</span></div>`);
+}
+function pSearch(){
+ return `<div class="pagehead"><div><span class="eyebrow">Instant, works even when chat quota is used up</span><h1>Find it <span class="mark">fast</span></h1></div></div>
+ <div class="card" style="margin-bottom:16px"><div class="row"><input id="sq" class="inp" style="flex:1;min-width:200px" value="${esc(S.searchQ)}" placeholder="Search code, docs and config" aria-label="Search"><label class="row" style="gap:6px"><input type="checkbox" id="sem" ${S.searchSem?'checked':''}> Match by meaning</label></div>
+ <div class="row" style="margin-top:12px">${['all','Python','Markdown','Config','Shell'].map(f=>`<button class="chip ${S.searchF===f?'on':''}" data-a="sf" data-v="${f}">${f==='all'?'All types':f}</button>`).join('')}</div></div>
+ <div id="results">${resultsHTML()}</div>`;
+}
+/* chat */
+function convs(){return S.chats[S.role]||(S.chats[S.role]=S.role==='admin'?[
+  {id:'a1',title:'How does checkout() work?',msgs:[{r:'u',t:'What does checkout() in checkout.py do?'},mkAnswer(ANSWERS[0],true)]},
+  {id:'a2',title:'Where is DATABASE_URL used?',msgs:[{r:'u',t:'How is DATABASE_URL used?'},mkAnswer(ANSWERS[1],true)]}]:[])}
+function activeConv(){const cs=convs();if(!cs.length)cs.push({id:'n'+Date.now(),title:'New chat',msgs:[]});let c=cs.find(x=>x.id===S.conv[S.role]);if(!c){c=cs[0];S.conv[S.role]=c.id}return c}
+function mkAnswer(a,skipAudit){return {r:'a',html:md(a.text),sources:a.src.map(([p,x,y])=>({p,a:x,b:y})),gate:a.gate,n:a.src.length+3}}
+function citeHTML(s){return canRead(s.p)?`<button class="cite" data-a="src" data-v="${s.p}|${s.a}|${s.b}">${ic('file')}${s.p}:${s.a}${s.b!==s.a?'-'+s.b:''}</button>`:`<span class="cite gone" title="You no longer have access to this file">${ic('lock')}Source no longer available</span>`}
+function msgHTML(m,i){
+ if(m.r==='u')return `<div class="msg u"><div style="max-width:80%;display:flex;flex-direction:column;align-items:flex-end;gap:6px">${m.quote?`<div class="qcard"><span class="path muted">${m.quote.p?esc(m.quote.p)+(m.quote.a?':'+m.quote.a+(m.quote.b!==m.quote.a?'-'+m.quote.b:''):''):'From an earlier answer'}</span><pre>${esc(m.quote.text.slice(0,240))}</pre></div>`:''}<div class="bub" style="max-width:100%">${esc(m.t)}${m.stopped?' <small style="opacity:.7">(stopped)</small>':''}</div></div></div>`;
+ if(m.pending)return `<div class="msg"><div class="abody"><div class="typing"><i></i><i></i><i></i><span>${m.stage}</span></div></div></div>`;
+ return `<div class="msg"><div class="abody selectable">
+  ${m.instant?'<div class="trace"><span class="gate-ok">Instant answer · no AI quota used</span></div>':`<div class="trace"><span class="${m.refused?'gate-no':'gate-ok'}">similarity ${m.gate.toFixed(2)} ${m.refused?'&lt;':'&ge;'} gate ${S.gate.toFixed(2)}</span><span>${m.refused?'no model call':m.n+' passages · 0.7 s'}</span></div>`}
+  ${m.instant?`<div class="instant">${m.html}</div>`:m.html}
+  ${m.sources&&m.sources.length?`<div class="cites">${m.sources.map(citeHTML).join('')}</div>`:''}
+  ${m.partial?'':`<div class="acts2" role="group" aria-label="Answer actions"><button data-a="copy" aria-label="Copy answer">${ic('copy')}</button><button class="${S.fb[m.id||i]==='up'?'on':''}" data-a="fb" data-v="up|${i}" aria-label="Helpful">${ic('up')}</button><button class="${S.fb[m.id||i]==='down'?'on':''}" data-a="fb" data-v="down|${i}" aria-label="Not helpful"><span style="display:flex;transform:rotate(180deg)">${ic('up')}</span></button><button data-a="regen" data-v="${i}" aria-label="Regenerate">${ic('refresh')}</button></div>`}</div></div>`;
+}
+function starters(){return STARTERS.filter(s=>canRead(s[1])).slice(0,4)}
+function renderMsgs(){
+ const c=activeConv(),el=$('#msgs');if(!el)return;
+ const sc=U().admin?'':` as ${esc(U().name.split(' ')[0])}`;
+ el.innerHTML='<div>'+(c.msgs.length?c.msgs.map(msgHTML).join(''):`<div class="welcome"><span class="eyebrow">${vis().length} files in scope${sc}</span><h2>Ask anything about <span class="mark">shop-api</span></h2><p class="muted">Answers use only files you can read. Each one links to the exact lines it came from. Try one of these, built from this project:</p>
+  <div class="starters">${starters().map(s=>`<button class="starter" data-a="ask" data-v="${esc(s[0])}"><span>${esc(s[0])}</span><small>${s[1]}</small></button>`).join('')}</div>
+  <p class="muted" style="margin-top:18px">Type <code class="mono">/env</code>, <code class="mono">/todo</code> or <code class="mono">/files</code> for instant answers that cost no AI quota.</p></div>`)+'</div>';
+ el.scrollTop=el.scrollHeight;
+}
+function pChat(){
+ const c=activeConv(),cs=convs();
+ return `<div class="chat ${S.src?'withsrc':''}" id="chatroot"><aside class="convs"><button class="btn pri" data-a="newchat" style="justify-content:center;margin-bottom:6px">${ic('plus')}New chat</button>
+  <span class="eyebrow" style="padding:6px 10px">Your conversations</span>${cs.map(x=>`<button class="conv ${x.id===c.id?'sel':''}" data-a="conv" data-v="${x.id}">${esc(x.title)}</button>`).join('')}
+  <p class="muted" style="padding:10px;font-size:12.5px;margin-top:auto">Conversations are private to ${esc(U().name.split(' ')[0])}.</p></aside>
+  <section class="thread"><div class="thead"><h2>${esc(c.title)}</h2><button class="btn sm" data-a="export">Copy as Markdown</button></div>
+   <div class="msgs" id="msgs" aria-live="polite"></div>
+   <div class="composer"><div><div class="box"><textarea id="q" rows="1" placeholder="Ask about the project. Type / for commands." aria-label="Question"></textarea>
+    <div class="bar2"><button class="chip" data-a="scope" title="Limit retrieval to one folder">${ic('folder')}Scope: ${S.scope?S.scope:'whole project'}</button><span class="muted" style="font-size:12px">Enter to send · Shift+Enter for a new line</span>
+    <span style="margin-left:auto">${S.streaming?`<button class="btn sm" data-a="stop">${ic('stop')}Stop</button>`:`<button class="btn pri sm" data-a="send">${ic('send')}Send</button>`}</span></div></div>
+    <div class="hint">Answers can be wrong. Check the cited lines.</div></div></div></section>
+  <aside class="srcpanel" id="srcpanel">${srcHTML()}</aside></div>`;
+}
+function srcHTML(){
+ if(!S.src)return '';
+ const [p,a,b]=S.src;const f=FILES.find(x=>x.p===p);
+ return `<header><span class="path" style="flex:1;min-width:0;word-break:break-all">${p}${a?':'+a+(b&&b!==a?'-'+b:''):''}</span><button class="iconbtn" data-a="closesrc" aria-label="Close source">${ic('x')}</button></header>
+ <div class="body"><div class="row"><span class="chip ok">ready</span><span class="chip">${lang(p)}</span>${f?`<span class="chip">${f.c} chunks</span>`:''}</div><p class="muted" style="margin:0;font-size:12.5px">Select any lines or text to ask about just that.</p>${codeBlock(p,a,b)}
+ <div class="row"><button class="btn sm" data-a="file" data-v="${p}">Open in Files</button><button class="btn sm" data-a="ask-file" data-v="${p}">Ask about this file</button></div></div>`;
+}
+function slash(q){
+ const t=q.trim().toLowerCase();
+ if(t==='/env'){const e=ENVV.filter(x=>canRead(x[2]));return {html:e.length?'<p><b>Environment variables</b></p>'+e.map(x=>`<p><code>${x[0]}</code> <span class="muted">${x[1]||'required'}</span> · ${x[2]}:${x[3]}</p>`).join(''):'<p>None found in files you can read.</p>',sources:e.slice(0,1).map(x=>({p:x[2],a:x[3],b:x[3]}))}}
+ if(t==='/todo'){const e=TODOS.filter(x=>canRead(x[0]));return {html:e.length?'<p><b>Notes in the code</b></p>'+e.map(x=>`<p>${esc(x[2])}<br><span class="path muted">${x[0]}:${x[1]}</span></p>`).join(''):'<p>None found in files you can read.</p>',sources:[]}}
+ if(t==='/files'){const v=vis();return {html:`<p><b>${v.length} files</b> in your scope, ${v.reduce((n,f)=>n+f.c,0)} chunks. Open the Files tab to browse.</p>`,sources:[]}}
+ return null;
+}
+function ask(q,quote){
+ q=q.trim();if(!q||S.streaming)return;
+ const c=activeConv();if(!c.msgs.length&&c.title==='New chat')c.title=q.replace(/\?$/,'').slice(0,48);
+ c.msgs.push({r:'u',t:q,quote:quote||null});renderMsgs();
+ const sl=slash(q);
+ if(sl){finish(c,{r:'a',instant:true,html:sl.html,sources:sl.sources,id:'m'+Date.now()},q,sl.sources.map(s=>s.p),'Answered');return}
+ if(quote&&quote.p&&/what calls|who imports|who uses|used by/i.test(q)){
+  const by=EDGES_RAW.filter(e=>e[1]===quote.p&&canRead(e[0])).map(e=>e[0]);
+  const html=by.length?`<p><b>${esc(quote.p.split('/').pop())}</b> is imported by:</p>`+by.map(p=>`<p class="path">${p}</p>`).join(''):'<p>No file you can read imports this one.</p>';
+  finish(c,{r:'a',instant:true,html,sources:[],id:'m'+Date.now()},q,[],'Answered');return}
+ let hit=null,intro='';
+ if(quote){
+  intro='About the text you selected:\n';
+  if(quote.p)hit=ANSWERS.find(a=>a.src.some(s=>s[0]===quote.p));
+  else hit=ANSWERS.find(a=>a.k.test(quote.text+' '+q));
+  if(!hit&&quote.p)hit={gate:.85,text:'This is a prototype answer. In the live app the model receives your selection ('+quote.p+(quote.a?', lines '+quote.a+' to '+quote.b:'')+') together with the most relevant surrounding chunks, and answers about that exact text.',src:[[quote.p,quote.a||1,quote.b||quote.a||1]]};
+ }else hit=ANSWERS.find(a=>a.k.test(q));
+ const text=hit?intro+hit.text:'';
+ const srcs=hit?hit.src.filter(s=>canRead(s[0])&&(!S.scope||s[0].startsWith(S.scope))):[];
+ const pend={r:'a',pending:true,stage:'Searching files you can read'};c.msgs.push(pend);S.streaming={c,pend,t:[]};renderMsgs();refreshComposer();
+ S.streaming.t.push(setTimeout(()=>{if(!S.streaming)return;
+  if(!hit||!srcs.length){const i=c.msgs.indexOf(pend);c.msgs[i]={r:'a',refused:true,gate:.63,html:md(REFUSAL),sources:[],id:'m'+Date.now()};S.streaming=null;audit(q,[],'Refused');renderMsgs();refreshComposer();return}
+  pend.stage='Writing the answer';renderMsgs();
+  const words=text.split(' ');let n=0;
+  const iv=setInterval(()=>{if(!S.streaming){clearInterval(iv);return}
+   n+=3;const i=c.msgs.indexOf(pend);
+   if(n>=words.length){clearInterval(iv);c.msgs[i]={r:'a',html:md(text),sources:srcs.map(([p,x,y])=>({p,a:x,b:y})),gate:hit.gate,n:srcs.length+3,id:'m'+Date.now()};S.streaming=null;audit(q,srcs.map(s=>s[0]),'Answered');refreshComposer()}
+   else c.msgs[i]={r:'a',pending:false,partial:true,html:md(words.slice(0,n).join(' ')),sources:[],gate:hit.gate,n:srcs.length+3};
+   renderMsgs()},60);S.streaming.t.push(iv)},900));
+}
+function finish(c,m,q,files,out){c.msgs.push(m);audit(q,files,out);renderMsgs()}
+function audit(q,files,out){S.audit.unshift([nowT(),U().name,q,files,out])}
+function refreshComposer(){const b=$('.composer .bar2 span:last-child');if(b)b.innerHTML=S.streaming?`<button class="btn sm" data-a="stop">${ic('stop')}Stop</button>`:`<button class="btn pri sm" data-a="send">${ic('send')}Send</button>`}
+/* access: people first. A rule sits on a folder or file and has one of three visibilities. */
+/* Folders and columns are derived from the project's real file paths, never listed by hand. */
+const FOLDERS=[...new Set(FILES.flatMap(f=>{const parts=f.p.split('/');return parts.slice(0,-1).map((_,i)=>parts.slice(0,i+1).join('/')+'/')}))].sort();
+function childrenOf(dir){
+ const folders=FOLDERS.filter(d=>d!==dir&&d.startsWith(dir)&&d.slice(dir.length).split('/').length===2);
+ const files=FILES.map(f=>f.p).filter(p=>p.startsWith(dir)&&!p.slice(dir.length).includes('/'));
+ return {folders,files};
+}
+/* Matrix columns: top-level folders first, a folder opens into its children, files appear when few or when they carry their own rule. */
+function matrixCols(){
+ const out=[];
+ const walk=(dir,depth)=>{
+  const {folders,files}=childrenOf(dir);
+  folders.forEach(d=>{const open=S.mxOpen.includes(d);out.push({p:d,dir:1,depth,open});if(open)walk(d,depth+1)});
+  const few=files.length<=10;files.filter(p=>few||RULES[p]).forEach(p=>out.push({p,dir:0,depth}));
+ };
+ walk('',0);return out;
+}
+function cellState(u,c){
+ if(!c.dir)return canReadAs(u,c.p)?'all':'none';
+ const fs=FILES.filter(f=>f.p.startsWith(c.p));const n=fs.filter(f=>canReadAs(u,f.p)).length;
+ return n===0?'none':n===fs.length?'all':'some';
+}
+const others=()=>Object.values(USERS).filter(u=>!u.admin);
+const depthOf=(p,dir)=>dir?p.split('/').length-2:p.split('/').length-1;
+function accessChips(p){const r=ruleFor(p);if(r.v==='everyone')return '<span class="chip on">Everyone</span>';if(r.v==='admin')return '<span class="chip">Only admins</span>';return r.p.length?'<span class="avs">'+r.p.map(id=>av(USERS[id],1)).join('')+'</span>':'<span class="chip bad">Nobody yet</span>'}
+function readers(p){return Object.values(USERS).filter(u=>canReadAs(u,p)).map(u=>`<span class="chip">${av(u)} ${esc(u.name.split(' ')[0])}${u.admin?' (admin)':''}</span>`).join('')}
+function accRows(){
+ return [...FOLDERS.map(p=>({p,dir:1})),...FILES.filter(f=>!f.p.includes('/')||RULES[f.p]).map(f=>({p:f.p,dir:0}))].sort((a,b)=>a.p<b.p?-1:1);
+}
+function accFolder(){
+ const p=S.accSel,own=RULES[p],from=ruleKey(p);
+ const list=accRows().map(x=>{const r=ruleFor(x.p),cls=r.v==='everyone'?'ok':r.v==='people'?'info':'';
+  return `<button class="arow ${x.p===p?'sel':''}" style="padding-left:${10+depthOf(x.p,x.dir)*16}px" data-a="asel" data-v="${x.p}">${ic(x.dir?'folder':'file')}<span class="n path">${x.p.split('/').filter(Boolean).pop()}${x.dir?'/':''}</span>${RULES[x.p]?'':'<span class="muted" style="font-size:12px">inherited</span>'}<span class="chip ${cls}">${ruleLabel(r)}</span></button>`}).join('');
+ const opt=(v,t,d)=>`<button class="opt ${own&&own.v===v?'on':''}" data-a="setvis" data-v="${p}|${v}" aria-pressed="${!!own&&own.v===v}" ${own?'':'disabled'}><b>${t}</b><span>${d}</span></button>`;
+ const avail=own&&own.v==='people'?others().filter(u=>!own.p.includes(u.id)):[];
+ const people=own&&own.v==='people'?`<div style="margin-top:14px"><span class="muted">People with access</span><div class="row" style="margin:8px 0">${own.p.map(id=>`<span class="chip on" style="padding-right:4px">${esc(USERS[id].name)}<button class="x" data-a="rmperson" data-v="${p}|${id}" aria-label="Remove ${esc(USERS[id].name)}">${ic('x')}</button></span>`).join('')||'<span class="muted">Nobody yet. Add someone below.</span>'}</div>
+  <label class="sr" for="addp">Add a person</label><select id="addp" class="inp" data-p="${p}"><option value="">Add a person…</option>${avail.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></div>`:'';
+ return `<div class="accgrid"><div class="card" style="padding:8px"><div class="arows">${list}</div></div>
+  <aside class="card"><span class="eyebrow">${p.endsWith('/')?'Folder':'File'}</span><h3 class="path" style="word-break:break-all;margin:4px 0 14px;font-family:var(--mono);font-size:15px">${p}</h3>
+  ${own?'':`<div class="callout" style="margin-bottom:14px"><b>No rule here.</b> It follows ${from?`<span class="path">${from}</span>`:'the default, which is admins only'}.<div style="margin-top:8px"><button class="btn sm" data-a="customise" data-v="${p}">Set a different rule here</button></div></div>`}
+  <div class="opts">${opt('everyone','Everyone','Anyone in this workspace')}${opt('people','Specific people','Only the people you pick')}${opt('admin','Only admins','Hidden from everyone else')}</div>
+  ${people}
+  <div style="margin-top:16px"><span class="muted">Can read this now</span><div class="row" style="margin-top:6px">${readers(p)}</div></div>
+  ${own?`<div style="margin-top:14px"><button class="btn sm ghost" data-a="rmrule" data-v="${p}">Remove this rule and follow the parent</button></div>`:''}</aside></div>`;
+}
+function accPerson(){
+ const u=USERS[S.accUser]||others()[0];
+ const rows=FILES.map(f=>{const ok=canReadAs(u,f.p),k=ruleKey(f.p),r=ruleFor(f.p);
+  return {p:f.p,ok,why:r.v==='everyone'?'Everyone can read it':ok?'Allowed by the rule on '+k:k?'The rule on '+k+' does not include '+u.name.split(' ')[0]:'No rule, so admins only'}});
+ const n=rows.filter(x=>x.ok).length;
+ return `<div class="row" style="margin-bottom:14px"><label for="accUser" class="muted">Person</label><select id="accUser" class="inp" style="width:auto">${others().map(x=>`<option value="${x.id}" ${x.id===u.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select>
+  <span class="chip ok">${n} of ${FILES.length} files readable</span><button class="btn sm" data-a="role-set" data-v="${u.id}">${ic('eye')}Preview app as ${esc(u.name.split(' ')[0])}</button>
+  <button class="btn sm" style="margin-left:auto" data-a="toast" data-v="Prototype: adding people is not wired up">${ic('plus')}Add person</button></div>
+  <div class="tw"><table><thead><tr><th>File</th><th>Access</th><th>Why</th></tr></thead><tbody>${rows.map(x=>`<tr><td class="path">${x.p}</td><td>${x.ok?'<span class="chip ok">'+ic('check')+'Can read</span>':'<span class="chip">'+ic('lock')+'Hidden</span>'}</td><td class="muted">${esc(x.why)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function accMatrix(){
+ const cols=matrixCols();
+ const head=cols.map(c=>{const n=c.dir?FILES.filter(f=>f.p.startsWith(c.p)).length:0,name=c.p.split('/').filter(Boolean).pop();
+  return `<th class="mxh"><div class="row" style="flex-wrap:nowrap;gap:2px;justify-content:center;padding-left:${c.depth*8}px">${c.dir?`<button class="x2" data-a="mxtoggle" data-v="${c.p}" aria-expanded="${c.open}" aria-label="${c.open?'Collapse':'Expand'} ${esc(c.p)}">${ic('chev')}</button>`:''}<span class="path" title="${esc(c.p)}">${esc(name)}${c.dir?'/':''}</span></div><small class="muted">${c.dir?n+' files':'file'}</small></th>`}).join('');
+ const row=u=>`<tr><td><div class="row" style="flex-wrap:nowrap">${av(u)}<b>${esc(u.name)}</b>${u.admin?'<span class="chip on">admin</span>':''}</div></td>${cols.map(c=>{
+  if(u.admin)return `<td style="text-align:center"><span class="cell on dis" aria-label="Admins read everything">${ic('check')}</span></td>`;
+  const st=cellState(u,c),lab=st==='all'?'can read all of':st==='some'?'can read some of':'cannot read';
+  return `<td style="text-align:center"><button class="cell ${st==='all'?'on':st==='some'?'part':''}" data-a="cell" data-v="${c.p}|${u.id}|${st}" aria-label="${esc(u.name)} ${lab} ${esc(c.p)}" title="${esc(u.name)} ${lab} ${esc(c.p)}">${st==='all'?ic('check'):st==='some'?ic('minus'):''}</button></td>`}).join('')}</tr>`;
+ return `<p class="muted" style="margin-top:0">Built from this project's folders. Open a folder with its arrow to see inside. Click a cell to grant or revoke one person on that folder or file.</p>
+  <div class="tw"><table class="matrix"><thead><tr><th>Person</th>${head}</tr></thead><tbody>${Object.values(USERS).map(row).join('')}</tbody></table></div>
+  <div class="legend" style="margin-top:14px"><span><span class="cell on dis" style="width:20px;height:20px;border-radius:6px;vertical-align:middle">${ic('check')}</span> reads everything here</span><span><span class="cell part dis" style="width:20px;height:20px;border-radius:6px;vertical-align:middle">${ic('minus')}</span> reads some (a file inside has its own rule)</span><span><span class="cell dis" style="width:20px;height:20px;border-radius:6px;vertical-align:middle"></span> reads nothing here</span></div>`;
+}
+function accAudit(){
+ return `<p class="muted" style="margin-top:0">Who asked what, and which files were handed to the model. New rows appear as you ask questions in Chat as different people.</p><div class="tw"><table><thead><tr><th>Time</th><th>Person</th><th>Question</th><th>Files served</th><th>Result</th></tr></thead><tbody>
+  ${S.audit.map(a=>`<tr><td class="mono">${a[0]}</td><td>${a[1]}</td><td>${esc(a[2])}</td><td>${a[3].length?a[3].map(p=>`<span class="path chip">${p.split('/').pop()}</span>`).join(' '):'<span class="muted">none</span>'}</td><td><span class="chip ${a[4]==='Answered'?'ok':'warn'}">${a[4]}</span></td></tr>`).join('')}</tbody></table></div>`;
+}
+function setAccess(p,uid,grant){
+ let r=RULES[p];if(!r){const cur=ruleFor(p);r=RULES[p]={v:cur.v,p:[...(cur.p||[])]}}
+ if(grant){
+  if(r.v==='admin'){r.v='people';r.p=[uid]}
+  else if(r.v==='people'&&!r.p.includes(uid))r.p.push(uid);
+ }else{
+  if(r.v==='everyone'){r.v='people';r.p=others().map(u=>u.id).filter(x=>x!==uid)}
+  else if(r.v==='people')r.p=r.p.filter(x=>x!==uid);
+ }
+}
+function pAccess(){
+ const tabs=[['folder','By folder'],['person','By person'],['matrix','Matrix'],['audit','Audit log']];
+ const body=S.accessTab==='folder'?accFolder():S.accessTab==='person'?accPerson():S.accessTab==='matrix'?accMatrix():accAudit();
+ const card=S.accessTab==='folder'?body:`<div class="card">${body}</div>`;
+ return `<div class="pagehead"><div><span class="eyebrow">Admin only · you read everything</span><h1>Who can <span class="mark">see what</span></h1><p>Pick a folder or file, then choose who can read it. Rules flow downward, and a rule on a single file overrides its folder. Anything without a rule is admin-only.</p></div></div>
+ <div class="tabs" role="tablist">${tabs.map(([id,l])=>`<button role="tab" aria-selected="${S.accessTab===id}" data-a="atab" data-v="${id}">${l}</button>`).join('')}</div>${card}`;
+}
+/* settings */
+function pSettings(){
+ const tabs=[['providers','Providers'],['retrieval','Retrieval'],['usage','Free-tier usage']];
+ let b='';
+ if(S.setTab==='providers')b=`<p class="muted" style="margin-top:0">Keys are shared by everyone in this workspace and are stored encrypted. Users never see them.</p><div class="grid g2">
+  <div class="field"><label for="k1">Chat model key (Groq)</label><div class="row" style="flex-wrap:nowrap"><input id="k1" class="inp" value="gsk_••••••••••••9f2a" readonly><button class="btn" data-a="toast" data-v="Groq connected · 412 ms">Test</button></div></div>
+  <div class="field"><label for="k2">Embedding key (Gemini)</label><div class="row" style="flex-wrap:nowrap"><input id="k2" class="inp" value="AIza••••••••••••c81d" readonly><button class="btn" data-a="toast" data-v="Gemini connected · 288 ms">Test</button></div></div>
+  <div class="field"><label for="m1">Chat model</label><select id="m1" class="inp"><option>openai/gpt-oss-120b</option><option>openai/gpt-oss-20b</option></select></div>
+  <div class="field"><label for="m2">Fallback when the minute budget is spent</label><select id="m2" class="inp"><option>openai/gpt-oss-20b</option><option>None</option></select></div></div>`;
+ else if(S.setTab==='retrieval')b=`<div class="grid g2"><div class="field"><label for="gt">Relevance gate: <b class="mono" id="gv">${S.gate.toFixed(2)}</b></label><input id="gt" class="slider" type="range" min="0.6" max="0.95" step="0.01" value="${S.gate}"><small class="muted">Below this, DevDocs declines without calling the model.</small>
+  <div><button class="btn sm" data-a="toast" data-v="Calibrated from 30 off-topic questions: gate set to 0.84 for this project" style="margin-top:6px">${ic('bolt')}Calibrate for this project</button></div></div>
+  <div class="field"><label>Reranker</label><button class="chip ${S.rerank?'on':''}" data-a="rerank" style="align-self:flex-start">${S.rerank?'On':'Off (recommended)'}</button><small class="muted">The gate beat the reranker in measurements, so it stays off by default.</small></div></div>`;
+ else b=`<div class="grid g2"><div class="card" style="box-shadow:none"><h3>Embedding calls today</h3><b class="mono" style="font-size:28px">312 <span class="muted" style="font-size:16px">/ 1,000</span></b><div class="bar"><i class="ok" style="width:31%"></i></div><p class="muted" style="margin:8px 0 0">Estimated for the next import: about 7 calls. Quota resets at midnight Pacific.</p></div>
+  <div class="card" style="box-shadow:none"><h3>Chat tokens this minute</h3><b class="mono" style="font-size:28px">3.2k <span class="muted" style="font-size:16px">/ 8k</span></b><div class="bar"><i style="width:40%"></i></div><p class="muted" style="margin:8px 0 0">If the budget runs out, questions route to the fallback model instead of waiting.</p></div></div>`;
+ return `<div class="pagehead"><div><span class="eyebrow">Admin only</span><h1><span class="mark">Settings</span></h1><p>Models, keys and retrieval tuning. Changes apply without a restart.</p></div></div>
+ <div class="tabs" role="tablist">${tabs.map(([id,l])=>`<button role="tab" aria-selected="${S.setTab===id}" data-a="stab" data-v="${id}">${l}</button>`).join('')}</div><div class="card">${b}</div>`;
+}
+const PAGES={signin:pSignin,projects:pProjects,dashboard:pDashboard,graph:pGraph,files:pFiles,search:pSearch,chat:pChat,access:pAccess,settings:pSettings};
+
+/* ------------------------------------------------------------------ render + routing */
+function render(){
+ let r=route();
+ if((r==='access'||r==='settings')&&!U().admin){
+  shell(r);$('#view').className='';$('#view').innerHTML=`<div class="empty"><h3>Page not found</h3><span>It may have been removed, or it isn't available to your account.</span><a class="btn" href="#dashboard">Back to dashboard</a></div>`;return}
+ shell(r);
+ const v=$('#view');v.className=r==='chat'?'fill':'';
+ v.innerHTML=PAGES[r]();
+ if(r==='chat'){renderMsgs();const q=$('#q');if(q){q.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});q.addEventListener('input',()=>{q.style.height='auto';q.style.height=q.scrollHeight+'px'});if(S.prefill){q.value=S.prefill;S.prefill='';q.focus()}}if(S.pending){const pd=S.pending;S.pending=null;setTimeout(()=>ask(pd.q,pd.quote),60)}}
+}
+function send(){const q=$('#q');if(!q)return;const t=q.value;q.value='';q.style.height='auto';ask(t)}
+function setRole(r){stopStream();S.role=r;S.src=null;S.graphSel=null;render()}
+function stopStream(){if(S.streaming){S.streaming.t.forEach(x=>{clearTimeout(x);clearInterval(x)});S.streaming=null}}
+window.addEventListener('hashchange',()=>{stopStream();hidePop();render()});
+
+/* modals */
+function modal(html,cls=''){$('#modal-root').innerHTML=`<div class="scrim" data-a="scrim"><div class="modal ${cls}" role="dialog" aria-modal="true">${html}</div></div>`;const f=$('#modal-root input,#modal-root button.btn');}
+function closeModal(){$('#modal-root').innerHTML=''}
+let newTab='github';
+function newModal(){
+ const tabs=[['github','GitHub URL'],['zip','Zip file'],['folder','Folder']];
+ const body=newTab==='github'?`<div class="field"><label for="gh">Repository URL</label><input id="gh" class="inp" value="https://github.com/example/shop-api"><small class="muted">Public repositories only. The default branch is downloaded as a zip.</small></div>
+   <div class="card" style="box-shadow:none;padding:14px"><div class="row" style="justify-content:space-between"><span><b>31 files</b> after the ignore list<br><span class="muted">About 74 chunks · about 2 embedding calls · 312 of 1,000 used today</span></span><span class="chip ok">fits today's quota</span></div></div>
+   <div class="callout"><b>2 files will be skipped: they look like secrets</b><br><span class="path">infra/deploy.key</span> (private key) · <span class="path">.env.production</span> (API keys)<br><span class="muted">Nothing from them is stored or sent to the AI providers.</span></div>`
+  :`<div class="dropzone">${newTab==='zip'?'Drop a .zip here or click to choose':'Drop a project folder here'}<br><small>Generated and minified files are skipped automatically</small></div>`;
+ modal(`<div class="mh"><h3>New project</h3><button class="iconbtn" data-a="closemodal" aria-label="Close">${ic('x')}</button></div>
+  <div class="mb"><div class="tabs" role="tablist" style="margin:0">${tabs.map(([id,l])=>`<button role="tab" aria-selected="${newTab===id}" data-a="ntab" data-v="${id}">${l}</button>`).join('')}</div>
+  <div class="field"><label for="pn">Project name</label><input id="pn" class="inp" value="shop-api"></div>${body}
+  <p class="muted" style="margin:0;font-size:12.5px">${ic('lock')} File contents are sent to Groq and Google to answer questions and build the search index.</p></div>
+  <div class="mf"><button class="btn" data-a="closemodal">Cancel</button><button class="btn pri" data-a="import">Import and index</button></div>`);
+}
+function runImport(){
+ modal(`<div class="mh"><h3>Importing shop-api</h3></div><div class="mb"><div class="progress"><i id="pg"></i></div><p class="muted" id="pt" style="margin:0">Downloading…</p></div>`);
+ const steps=[[25,'Downloading the repository…'],[50,'Skipping secrets and generated files…'],[80,'Reading and chunking 31 files…'],[100,'Embedding 74 chunks…']];let i=0;
+ const iv=setInterval(()=>{const s=steps[i++];if(!s){clearInterval(iv);closeModal();toast('Imported. 31 files indexed, 2 skipped.');location.hash='dashboard';return}$('#pg').style.width=s[0]+'%';$('#pt').textContent=s[1]},650);
+}
+let palSel=0;
+function palette(){
+ modal(`<div class="mb pal"><input id="pq" class="inp" placeholder="Jump to a page or file" aria-label="Jump to" autocomplete="off"><ul id="pl"></ul></div>`,'');
+ $('.scrim').style.paddingTop='12vh';palList('');$('#pq').focus();
+}
+function palItems(t){
+ const pages=[['dashboard','Dashboard','grid'],['graph','Dependency map','graph'],['files','Files','folder'],['search','Search','search'],['chat','Chat','chat'],['projects','Projects','folder']];
+ if(U().admin)pages.push(['access','Access','shield'],['settings','Settings','sliders']);
+ const it=pages.map(([id,l,i])=>({l:'Go to '+l,i,run:()=>{location.hash=id}})).concat(vis().map(f=>({l:f.p,i:'file',run:()=>{S.sel=f.p;location.hash='files';render()}})));
+ return it.filter(x=>x.l.toLowerCase().includes(t.toLowerCase())).slice(0,9);
+}
+function palList(t){const it=palItems(t);palSel=0;$('#pl').innerHTML=it.map((x,i)=>`<li><button class="${i===0?'act':''}" data-a="pal" data-v="${i}">${ic(x.i)}<span class="${x.i==='file'?'path':''}">${esc(x.l)}</span></button></li>`).join('')||'<li class="empty">No matches</li>';$('#pl')._it=it}
+
+/* events */
+document.addEventListener('click',e=>{
+ const t=e.target.closest('[data-a]');if(!t)return;
+ const a=t.dataset.a,v=t.dataset.v;
+ if(a==='scrim'){if(e.target===t)closeModal();return}
+ if(a==='goto'){location.hash=v}
+ else if(a==='toast')toast(v)
+ else if(a==='theme'){const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'}
+ else if(a==='role-admin')setRole('admin')
+ else if(a==='palette')palette()
+ else if(a==='modal-new')newModal()
+ else if(a==='closemodal')closeModal()
+ else if(a==='ntab'){newTab=v;newModal()}
+ else if(a==='import')runImport()
+ else if(a==='pal'){const it=$('#pl')._it[+v];closeModal();it.run()}
+ else if(a==='file'){S.sel=v;S.src=null;closeModal();location.hash==='#files'?render():location.hash='files'}
+ else if(a==='src'){const [p,x,y]=v.split('|');S.src=[p,+x||null,+y||null];if(route()==='chat')render();else{location.hash='chat'}}
+ else if(a==='closesrc'){S.src=null;render()}
+ else if(a==='gnode'){S.graphSel=v;render()}
+ else if(a==='ask-file'){S.prefill='What does '+v.split('/').pop()+' do?';S.src=null;location.hash==='#chat'?render():location.hash='chat'}
+ else if(a==='ask'){$('#q')&&($('#q').value='');ask(v)}
+ else if(a==='send')send()
+ else if(a==='stop'){const s=S.streaming;if(s){const c=s.c;stopStream();c.msgs=c.msgs.filter(m=>m!==s.pend);const last=[...c.msgs].reverse().find(m=>m.r==='u');if(last)last.stopped=true;renderMsgs();refreshComposer()}}
+ else if(a==='newchat'){const c=convs();const n={id:'n'+Date.now(),title:'New chat',msgs:[]};c.unshift(n);S.conv[S.role]=n.id;S.src=null;render()}
+ else if(a==='conv'){S.conv[S.role]=v;render()}
+ else if(a==='fb'){const [d,i]=v.split('|'),m=activeConv().msgs[+i],k=m.id||+i;S.fb[k]=S.fb[k]===d?null:d;renderMsgs();if(S.fb[k])toast('Thanks. Rating saved for the admin insights.')}
+ else if(a==='copy'){const m=t.closest('.abody');try{navigator.clipboard.writeText(m.innerText)}catch(_){}toast('Copied')}
+ else if(a==='regen'){const c=activeConv(),i=+v,q=c.msgs[i-1];if(q&&q.r==='u'){c.msgs.splice(i-1,2);ask(q.t,q.quote)}}
+ else if(a==='export'){const c=activeConv();const md=c.msgs.map(m=>m.r==='u'?'**Q:** '+m.t:'**A:** '+(m.html||'').replace(/<[^>]+>/g,'')+(m.sources&&m.sources.length?'\n\nSources: '+m.sources.map(s=>s.p+':'+s.a+'-'+s.b).join(', '):'')).join('\n\n');try{navigator.clipboard.writeText(md)}catch(_){}toast('Conversation copied as Markdown')}
+ else if(a==='scope'){const opts=['', ...new Set(vis().map(f=>f.p.includes('/')?f.p.split('/')[0]+'/':null).filter(Boolean))];S.scope=opts[(opts.indexOf(S.scope)+1)%opts.length];const c=$('.composer .chip');if(c)c.innerHTML=ic('folder')+'Scope: '+(S.scope||'whole project')}
+ else if(a==='asel'){S.accSel=v;render()}
+ else if(a==='customise'){const cur=ruleFor(v);RULES[v]={v:cur.v,p:[...(cur.p||[])]};render()}
+ else if(a==='setvis'){const [p,k]=v.split('|');RULES[p].v=k;if(!RULES[p].p)RULES[p].p=[];render()}
+ else if(a==='rmperson'){const [p,id]=v.split('|');RULES[p].p=RULES[p].p.filter(x=>x!==id);render()}
+ else if(a==='rmrule'){delete RULES[v];render()}
+ else if(a==='cell'){const [p,id,st]=v.split('|');setAccess(p,id,st!=='all');render()}
+ else if(a==='mxtoggle'){const i=S.mxOpen.indexOf(v);i>=0?S.mxOpen.splice(i,1):S.mxOpen.push(v);render()}
+ else if(a==='role-set')setRole(v)
+ else if(a==='sp-send')spSend()
+ else if(a==='sp-quick')spSend(v)
+ else if(a==='atab'){S.accessTab=v;render()}
+ else if(a==='stab'){S.setTab=v;render()}
+ else if(a==='rerank'){S.rerank=!S.rerank;render()}
+ else if(a==='sf'){S.searchF=v;render()}
+});
+document.addEventListener('change',e=>{
+ if(e.target.id==='roleSel')setRole(e.target.value);
+ if(e.target.id==='addp'){const r=RULES[e.target.dataset.p],val=e.target.value;if(r&&val&&!r.p.includes(val))r.p.push(val);render()}
+ if(e.target.id==='accUser'){S.accUser=e.target.value;render()}
+ if(e.target.id==='sem'){S.searchSem=e.target.checked;$('#results').innerHTML=resultsHTML()}
+});
+document.addEventListener('input',e=>{
+ if(e.target.id==='sq'){S.searchQ=e.target.value;$('#results').innerHTML=resultsHTML()}
+ if(e.target.id==='gt'){S.gate=+e.target.value;$('#gv').textContent=S.gate.toFixed(2)}
+ if(e.target.id==='pq')palList(e.target.value);
+});
+document.addEventListener('submit',e=>{const f=e.target.closest('[data-a="signin-form"]');if(f){e.preventDefault();toast('Admin account created');location.hash='projects'}});
+document.addEventListener('keydown',e=>{
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();palette()}
+ if(e.key==='Escape'){closeModal();hidePop()}
+ if(e.target.id==='spq'&&e.key==='Enter'){e.preventDefault();spSend()}
+ if(e.target.id==='pq'&&(e.key==='Enter'||e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();const it=$('#pl')._it||[];if(e.key==='Enter'){if(it[palSel]){closeModal();it[palSel].run()}return}
+  palSel=(palSel+(e.key==='ArrowDown'?1:-1)+it.length)%Math.max(it.length,1);document.querySelectorAll('#pl button').forEach((b,i)=>b.classList.toggle('act',i===palSel))}
+ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.pcard,.gnode')){e.preventDefault();e.target.click()}
+});
+/* select-and-ask: highlight code or text anywhere marked .selectable, get a floating prompt */
+let SEL=null;
+const pop=document.createElement('div');pop.id='selpop';pop.className='selpop';pop.hidden=true;pop.setAttribute('role','dialog');pop.setAttribute('aria-label','Ask about your selection');document.body.appendChild(pop);
+function hidePop(){pop.hidden=true;SEL=null}
+function showPop(info,r){
+ SEL=info;
+ const where=info.p?info.p+(info.a?':'+info.a+(info.b!==info.a?'-'+info.b:''):''):'Selected text from an answer';
+ pop.innerHTML=`<div class="sp-q"><span class="path muted">${esc(where)}</span><span class="sp-t">${esc(info.text.slice(0,140))}${info.text.length>140?'…':''}</span></div>
+ <div class="sp-row"><input id="spq" class="inp" placeholder="Ask about this selection" aria-label="Your question about the selection" autocomplete="off"><button class="btn pri sm" data-a="sp-send">${ic('send')}Ask</button></div>
+ <div class="row" style="gap:6px">${['Explain this','Why is this here?'].concat(info.p?['What calls this?']:[]).map(t=>`<button class="chip" data-a="sp-quick" data-v="${t}">${t}</button>`).join('')}</div>
+ <small class="muted">Uses your selection plus related files you can read.</small>`;
+ pop.hidden=false;
+ const w=pop.offsetWidth||340,h=pop.offsetHeight||160;
+ const x=Math.min(Math.max(12,r.left),innerWidth-w-12);let y=r.bottom+10;if(y+h>innerHeight-12)y=Math.max(12,r.top-h-10);
+ pop.style.left=x+'px';pop.style.top=y+'px';
+}
+function checkSel(){
+ const s=getSelection();if(!s||s.isCollapsed||!s.rangeCount){hidePop();return}
+ const t=s.toString().trim();if(t.length<2){hidePop();return}
+ const n=s.anchorNode,el=n&&(n.nodeType===1?n:n.parentElement),host=el&&el.closest('.selectable');
+ if(!host){hidePop();return}
+ const info={text:t.slice(0,800),p:host.dataset.p||null,a:null,b:null};
+ const lines=[...host.querySelectorAll('.ln')].filter(l=>s.containsNode(l,true));
+ if(lines.length){info.a=+lines[0].querySelector('i').textContent;info.b=+lines[lines.length-1].querySelector('i').textContent}
+ showPop(info,s.getRangeAt(0).getBoundingClientRect());
+}
+function spSend(text){
+ const q=((text||($('#spq')&&$('#spq').value)||'').trim())||'Explain this';const quote=SEL;
+ if(!quote)return;
+ hidePop();const sel=getSelection();if(sel)sel.removeAllRanges();
+ if(route()==='chat'){ask(q,quote);return}
+ const cs=convs(),n={id:'n'+Date.now(),title:'New chat',msgs:[]};cs.unshift(n);S.conv[S.role]=n.id;
+ S.pending={q,quote};S.src=null;location.hash='chat';
+}
+document.addEventListener('mouseup',e=>{if(e.target.closest('#selpop'))return;setTimeout(checkSel,10)});
+document.addEventListener('keyup',e=>{if(e.shiftKey&&!e.target.closest('#selpop'))checkSel()});
+document.addEventListener('mousedown',e=>{if(!e.target.closest('#selpop'))hidePop()});
+addEventListener('scroll',e=>{if(!pop.contains(e.target))hidePop()},true);
+
+render();
+</script>
+</body>
+</html>

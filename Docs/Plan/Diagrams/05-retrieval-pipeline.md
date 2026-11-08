@@ -4,7 +4,7 @@ Hybrid retrieval from question to final context. Source: Plan → Backend Behavi
 
 ```mermaid
 flowchart TD
-    Q["User question<br/>(a follow-up with a reference word<br/>gets the previous question prepended)"] --> Elig["Eligible set:<br/>project_id = current<br/>AND file status = ready<br/>(enforced by backend)"]
+    Q["User question<br/>(a follow-up with a reference word<br/>gets the previous question prepended)"] --> Elig["Eligible set:<br/>project_id = current<br/>AND file status = ready<br/>AND the asker may read it<br/>(access rules, enforced by backend)"]
     Elig --> Par{{"Run concurrently"}}
 
     Par --> BM["ES BM25: stopword-stripped terms on<br/>content + path_text + section<br/>Top-K 10 (code-aware analyzer)"]
@@ -30,6 +30,6 @@ flowchart TD
     Retry -. "exhausted" .-> Err["RetrievalError"]
 ```
 
-**Filter placement:** the `project_id` and ready `file_id` filter sits inside both the `match` and `knn` queries, so filtering happens before ranking. Results are also intersected with Postgres ready IDs.
+**Filter placement:** the `project_id` and readable, ready `file_id` filter sits inside both the `match` and `knn` queries, so filtering happens before ranking and a hidden file can never take a result slot. Results are also intersected with the same Postgres IDs. If only restricted files would answer, the asker gets the normal refusal, which never mentions permissions.
 
 **Why the gate is on vector similarity:** it is the best refusal signal measured (AUC 0.991) and is already computed by the kNN search; the reranker's score separated worse and cost 1 to 3 s. The reranker is therefore an optional ordering stage, off by default.

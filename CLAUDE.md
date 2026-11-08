@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository.
 
 ## Project status
 
-Implementation follows the phases in `Docs/Plan/Phases.md`. **All phases 0–12 are implemented** (Phases 0–6 approved by the user; Phases 7–12 delivered in one pass on the user's instruction "take over and fully implement all the remaining features", so they have **not had the per-phase proof review**: run the proofs in `Phases.md` to accept them). Also done in that pass: retrieval round 2 (BM25 over path/section, test-file prior, follow-up resolution), the answer-phase work (token settling, same-provider Groq fallback model, wait notice), vector reuse on file edits, and a UI redesign. See `Docs/Reports/Retrieval-Optimisation-Round-2.md` and `Docs/Reports/Optimisation-Analysis.md` (what is next). Open: `JevReranker` is a stub until Jev's API details are provided; a daily Gemini embedding quota 429 still marks remaining files `failed` (Retry works). Providers: Groq is the chat default (`LLM_PROVIDER=groq`; Gemini chat is switchable but slower), Gemini embeddings. Runtime settings (Settings page) are stored in Postgres and override `.env`. The repo is a git repo with one initial commit; the phase 7–12 work is uncommitted.
+Implementation follows the phases in `Docs/Plan/Phases.md`. **All phases 0–12 are implemented** (Phases 0–6 approved by the user; Phases 7–12 delivered in one pass on the user's instruction "take over and fully implement all the remaining features", so they have **not had the per-phase proof review**: run the proofs in `Phases.md` to accept them). Also done in that pass: retrieval round 2 (BM25 over path/section, test-file prior, follow-up resolution), the answer-phase work (token settling, same-provider Groq fallback model, wait notice), vector reuse on file edits, and a UI redesign. On 2026-11-08 a visual polish pass restyled every screen (tokens incl. a teal accent, account menu as the only way to Settings, folding project sidebar, cursor rules; see `Docs/Plan/Frontend-Design.md`) and the Dashboard's to-do notes were removed at the owner's request (backend scan and `todos` field gone). See `Docs/Reports/Retrieval-Optimisation-Round-2.md` and `Docs/Reports/Optimisation-Analysis.md` (what is next). Open: `JevReranker` is a stub until Jev's API details are provided; a daily Gemini embedding quota 429 still marks remaining files `failed` (Retry works). Providers: Groq is the chat default (`LLM_PROVIDER=groq`; Gemini chat is switchable but slower), Gemini embeddings. Runtime settings (Settings page) are stored in Postgres and override `.env`. The repo is a git repo with one initial commit; the phase 7–12 work is uncommitted.
 
 ## Commands
 
@@ -38,6 +38,8 @@ A project-scoped RAG assistant for software projects. The user uploads a project
 | `Docs/Plan/Future-Caching.md` | Post-V1 caching analysis (not in V1 scope; V1 has no cache). |
 | `Docs/Backend-File-Flow.md` | Backend file sequence numbers, dependency table/graph, migration chain, runtime flows. Source of truth for file order. |
 | `Docs/Plan/Chunking.md`, `Retrieval.md`, `ES-Inspector.md` | Per-topic design docs for Phases 4–6 (parsing/chunking, hybrid retrieval and eval, dev ES Inspector). |
+| `Docs/Plan/Frontend-Design.md` | Frontend look and feel: colour tokens, shared classes and components, layout, cursor rules. Read before adding or restyling a screen. |
+| `Docs/Design/` | Clickable redesign prototype (`devdocs-redesign.html`, mock data) and the app screenshots used by the README (`dev1.png`–`dev8.png`). |
 | `Docs/Plan/Diagrams/` | 14 Mermaid diagrams + `README.md` index. |
 | `Docs/Reports/`, `Docs/Impl_Clarifications/` | Measured results and open weak spots (retrieval); short implementation notes (hashing, reranker threshold). |
 | `Docs/Running-with-Docker.md` | Running the stack in Docker. |
@@ -47,12 +49,14 @@ Layout: `backend/` (FastAPI in `app/`, Alembic in `alembic/`, retrieval eval in 
 ## Stack decisions (user's choices — do not override)
 
 - **Postgres 16** (source of truth) + **Elasticsearch 8.x** for *both* BM25 and dense-vector kNN. **Do not propose ChromaDB or SQLite-FTS.**
-- Local single-user app, no auth. FastAPI + SQLAlchemy 2 async + Alembic; React + Vite + Tailwind + TanStack Query.
+- Permission-aware: email + password accounts (signed HttpOnly session cookie, first-run screen creates the admin), admin / member roles, access rules on folders and files (people first, no predefined groups, admin reads everything, one shared set of AI keys managed by the admin). `LOCAL_MODE=true` skips sign-in for one person on their own machine. FastAPI + SQLAlchemy 2 async + Alembic; React + Vite + Tailwind + TanStack Query.
 - **Groq** for the LLM by default (`openai/gpt-oss-120b`, via the `openai` SDK pointed at Groq's OpenAI-compatible base URL), switchable to **Gemini** chat with `LLM_PROVIDER=groq|gemini` in `.env` (Settings UI later), and **Google Gemini** for embeddings (`gemini-embedding-001`, `output_dimensionality=1536`, cosine; `RETRIEVAL_DOCUMENT`/`RETRIEVAL_QUERY` task types) behind thin `LLMProvider`/`EmbeddingProvider` wrappers — nothing else imports these SDKs directly (`EmbeddingProvider` calls Gemini over REST with `httpx`; `LLMProvider` uses the `openai` SDK for Groq and Gemini, with a same-provider router for the fallback model). Switched from OpenAI on 2026-10-10. Infra is ₹0; API calls are metered and rate-limited.
 - Reranker behind a `Reranker` interface and **optional, off by default** (`RERANK_TOP_N=0`; the user approved dropping it from the default path after the data showed the vector-similarity gate and filter beat it): local fastembed Cross-Encoder when on; `JevReranker` ("System One" model) is an adapter to finish once its API details are provided.
 - RRF (k=60) is done in application code, not ES.
 
 ## Key design invariants
+
+- **Permissions (the leak rules).** Every surface that returns content or file names goes through `app/access.py` (`readable_files`, `can_read_file`) or `auth_deps.project_for` / `file_for`. A file the person may not read answers 404, identical to a missing file; counts, lists, search, graph, dashboard and starters never include it; retrieval takes a required `viewer` and filters Elasticsearch by the readable ids; the refusal for restricted content is the same text as for an off-topic question and never mentions permissions. Conversations belong to their creator only (admins too). New endpoints must use these helpers and get a case in `tests/test_access.py`.
 
 - Retrieval must always filter by `project_id` **and** Postgres `ready` file IDs (project isolation; never trust the client).
 - A file becomes `ready` only after its chunks are indexed in ES. Postgres writes first, then ES.

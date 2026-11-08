@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+import { apiFetch } from "./http";
 
 export interface SettingsValues {
   dev_mode: boolean;
@@ -43,7 +43,7 @@ export type SettingsPatch = Partial<SettingsValues> & Partial<Record<SecretName,
 export type TestTarget = "llm" | "embedding" | "jev";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { ...init, headers: { "Content-Type": "application/json" } });
+  const res = await apiFetch(path, { ...init, headers: { "Content-Type": "application/json" } });
   if (!res.ok) throw new Error(res.status === 422 ? "One of the values is out of range." : "Something went wrong. Please try again.");
   return res.json();
 }

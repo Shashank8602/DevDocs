@@ -9,6 +9,7 @@ import uuid
 import pytest
 from elastic_transport import ConnectionError as ESConnectionError
 
+from app.access import SYSTEM_ADMIN
 from app.config import settings
 from app.providers.embeddings import EmbeddingError
 from app.retrieval import pipeline
@@ -150,7 +151,7 @@ async def _ingested(client, ingest, items, name="Demo"):
 
 async def _retrieve(sessions, pid, q, **kw):
     async with sessions() as s:
-        return await pipeline.retrieve(s, uuid.UUID(pid), q, **kw)
+        return await pipeline.retrieve(s, uuid.UUID(pid), q, viewer=SYSTEM_ADMIN, **kw)
 
 
 async def test_relevant_question_returns_the_matching_chunk_with_metadata(client, ingest, sessions):
@@ -187,7 +188,7 @@ async def test_other_projects_chunks_are_never_returned(client, ingest, sessions
 
 async def _trace(sessions, pid, q, **kw):
     async with sessions() as s:
-        return await pipeline.run(s, uuid.UUID(pid), q, **kw)
+        return await pipeline.run(s, uuid.UUID(pid), q, viewer=SYSTEM_ADMIN, **kw)
 
 
 async def test_files_that_are_not_ready_are_not_searched(client, ingest, sessions):
@@ -355,5 +356,5 @@ async def test_lock_files_are_ignored_on_upload(client):
     files = [("files", ("package-lock.json", b"{}")), ("files", ("package.json", b"{}"))]
     res = await client.post(f"/projects/{pid}/upload", files=files, data={"paths": ["app/package-lock.json", "app/package.json"]})
     by_path = {r["path"]: r for r in res.json()["results"]}
-    assert by_path["app/package-lock.json"] == {"path": "app/package-lock.json", "status": "rejected", "reason": "ignored"}
+    assert by_path["app/package-lock.json"] == {"path": "app/package-lock.json", "status": "rejected", "reason": "ignored", "detail": None}
     assert by_path["app/package.json"]["status"] == "accepted"

@@ -25,18 +25,22 @@ export default function CodeRenderer({ text, language, highlight = [] }: Props) 
   }, [firstLine, lines]);
 
   return (
-    <pre className="hljs overflow-auto bg-surface text-[13px] leading-5">
+    <pre className="hljs selectable-text overflow-auto bg-surface py-2 text-[13px] leading-[1.35rem]">
       <code className="block min-w-max">
-        {lines.map((line, i) => (
-          <div
-            key={i}
-            ref={i + 1 === firstLine ? first : undefined}
-            className={`flex ${marked(i + 1) ? "bg-amber-500/15 shadow-[inset_3px_0_0_rgb(var(--amber-500))]" : ""}`}
-          >
-            <span className="w-12 shrink-0 select-none pr-3 text-right text-slate-400">{i + 1}</span>
-            <span className="whitespace-pre pr-4" dangerouslySetInnerHTML={{ __html: line || " " }} />
-          </div>
-        ))}
+        {lines.map((line, i) => {
+          const on = marked(i + 1);
+          return (
+            <div
+              key={i}
+              data-line={i + 1}
+              ref={i + 1 === firstLine ? first : undefined}
+              className={`flex ${on ? "bg-amber-500/15" : "hover:bg-slate-100/60"}`}
+            >
+              <span className={`w-14 shrink-0 cursor-default select-none pr-4 text-right tabular-nums ${on ? "font-medium text-amber-700" : "text-slate-400"}`}>{i + 1}</span>
+              <span className="whitespace-pre pr-6" dangerouslySetInnerHTML={{ __html: line || " " }} />
+            </div>
+          );
+        })}
       </code>
     </pre>
   );

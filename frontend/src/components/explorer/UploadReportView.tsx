@@ -42,7 +42,7 @@ export default function UploadReportView({ report, skipped }: { report: UploadCh
               disabled={count === 0}
               aria-pressed={selected === t.key}
               onClick={() => setSelected(selected === t.key ? null : t.key)}
-              className={`rounded-md px-2 py-2 text-center transition ${t.tone} ${
+              className={`rounded-lg px-2 py-2.5 text-center transition ${t.tone} ${
                 selected === t.key ? `ring-2 ${t.ring}` : "hover:brightness-95"
               } disabled:cursor-default disabled:opacity-50 disabled:hover:brightness-100`}
             >
@@ -54,7 +54,7 @@ export default function UploadReportView({ report, skipped }: { report: UploadCh
       </div>
 
       {tile ? (
-        <ul className="mt-3 max-h-48 overflow-auto rounded-md border border-slate-100 px-3 py-2 text-sm">
+        <ul className="mt-3 max-h-48 overflow-auto rounded-lg border border-slate-200 px-3 py-2 text-sm">
           {report[tile.key].map((p) => <PathRow key={p} path={p} root={root} />)}
         </ul>
       ) : (

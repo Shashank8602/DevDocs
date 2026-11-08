@@ -39,7 +39,7 @@ function Bars({ values }: { values: number[] }) {
 function ChunkVector({ c, full }: { c: VectorPeekChunk; full: boolean }) {
   const bars = c.values ? downsample(c.values, 96) : c.preview;
   return (
-    <li className="min-w-0 overflow-hidden rounded-md border border-slate-200 bg-surface">
+    <li className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-surface">
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 border-b border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
         <span className="font-medium">#{c.ordinal}</span>
         {c.line_start != null && <span>lines {c.line_start}–{c.line_end}</span>}
@@ -58,11 +58,11 @@ function ChunkVector({ c, full }: { c: VectorPeekChunk; full: boolean }) {
           {c.values ? `all ${c.dims} values, averaged into ${bars.length} bars` : `first ${c.preview.length} of ${c.dims} values`}
           {" "}(<span className="text-brand-600">blue</span> positive, <span className="text-red-500">red</span> negative)
         </p>
-        <p className="mt-1 break-all font-mono text-xs text-slate-700">
+        <p className="selectable-text mt-1 break-all font-mono text-xs text-slate-700">
           [{c.preview.map((v) => v.toFixed(4)).join(", ")}, …]
         </p>
         {full && c.values && (
-          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-700">
+          <pre className="selectable-text mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-50 p-2 font-mono text-xs text-slate-700">
             {c.values.map((v) => v.toFixed(6)).join(", ")}
           </pre>
         )}
@@ -90,7 +90,7 @@ export default function VectorPeek({ projectId, fileId }: { projectId: string; f
             <span>
               {data.chunks.length} of {data.postgres_chunks} chunk{data.postgres_chunks === 1 ? "" : "s"} have a vector in ES
             </span>
-            <button onClick={() => setFull(!full)} className="rounded border border-slate-300 px-2 py-0.5 hover:bg-white">
+            <button onClick={() => setFull(!full)} className="btn-secondary px-2 py-0.5 text-xs">
               {full ? "Hide all values" : "Show all values"}
             </button>
           </div>

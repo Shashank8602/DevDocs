@@ -57,7 +57,8 @@ async def test_sources_are_built_by_the_app_streamed_and_frozen_on_the_answer(cl
     assert saved.role == "assistant" and saved.sources_json == sources  # frozen with the answer
     cid = events[0][1]["conversation_id"]
     restored = (await client.get(f"/conversations/{cid}")).json()["messages"][-1]
-    assert restored["sources_json"] == sources
+    assert [{k: v for k, v in r.items() if k != "available"} for r in restored["sources_json"]] == sources
+    assert all(r["available"] for r in restored["sources_json"])
 
 
 async def test_no_context_reply_has_no_sources(client, ingest):
@@ -238,14 +239,14 @@ async def test_context_inspector_is_dev_only(client, ingest, monkeypatch):
 
 
 # --- Stop while the model is still thinking (cancellation, not a clean close) ---
-async def test_cancelling_a_turn_that_is_waiting_on_the_llm_marks_it_stopped(client, ingest, sessions, llm):
+async def test_cancelling_a_turn_that_is_waiting_on_the_llm_marks_it_stopped(client, ingest, sessions, llm, admin):
     import asyncio
 
     from app.generation import chat
 
     pid = await _project(client, ingest)
     async with sessions() as s:
-        conv = Conversation(project_id=uuid.UUID(pid), title="t")
+        conv = Conversation(project_id=uuid.UUID(pid), user_id=admin.id, title="t")
         s.add(conv)
         await s.flush()
         user = Message(conversation_id=conv.id, role="user", content="validate_token decode token", gen_state="pending")
@@ -254,7 +255,7 @@ async def test_cancelling_a_turn_that_is_waiting_on_the_llm_marks_it_stopped(cli
     llm.hang = True  # the provider never produces a token: the turn is parked inside the LLM call
 
     async def consume():
-        async for _ in chat.stream_answer(sessions, uuid.UUID(pid), conv.id, user.id, "validate_token decode token"):
+        async for _ in chat.stream_answer(sessions, uuid.UUID(pid), conv.id, user.id, "validate_token decode token", admin.id):
             pass
 
     task = asyncio.create_task(consume())

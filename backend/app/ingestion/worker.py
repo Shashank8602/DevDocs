@@ -8,6 +8,7 @@ Elasticsearch, and only then is the file marked `ready`."""
 import asyncio
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy import delete, select, update
@@ -19,7 +20,7 @@ from app.ingestion.chunking import chunk_document
 from app.ingestion.parsers import parse
 from app.ingestion.status import refresh_project_status
 from app.models import Chunk, File, Project
-from app.providers.embeddings import get_embedding_provider
+from app.providers.embeddings import EmbeddingQuotaError, get_embedding_provider
 from app.search import indexer
 from app.search.index_manager import ensure_index
 
@@ -28,6 +29,33 @@ log = logging.getLogger("devdocs.worker")
 _queue: asyncio.Queue[uuid.UUID] | None = None
 _queued: set[uuid.UUID] = set()
 _consumer: asyncio.Task | None = None
+
+# A spent embedding quota is not a failed file: the job pauses, the files stay `pending`, and the job resumes
+# on its own. `_paused` maps project -> (resume time, quota is the daily one).
+MINUTE_QUOTA_PAUSE_SECONDS = 90
+DAILY_QUOTA_PAUSE_SECONDS = 30 * 60  # checked again every 30 minutes until the day's quota is back
+_paused: dict[uuid.UUID, tuple[datetime, bool]] = {}
+_resume_handles: dict[uuid.UUID, asyncio.TimerHandle] = {}
+
+
+def paused_until(project_id: uuid.UUID) -> tuple[datetime, bool] | None:
+    """(when the job resumes, whether it is the daily quota) while the project's ingestion is paused."""
+    entry = _paused.get(project_id)
+    if entry and entry[0] <= datetime.now(timezone.utc):
+        return None  # the resume time has passed; the retry is about to start
+    return entry
+
+
+def _pause(project_id: uuid.UUID, daily: bool) -> None:
+    seconds = DAILY_QUOTA_PAUSE_SECONDS if daily else MINUTE_QUOTA_PAUSE_SECONDS
+    _paused[project_id] = (datetime.now(timezone.utc) + timedelta(seconds=seconds), daily)
+    old = _resume_handles.pop(project_id, None)
+    if old:
+        old.cancel()
+    try:
+        _resume_handles[project_id] = asyncio.get_running_loop().call_later(seconds, enqueue, project_id)
+    except RuntimeError:  # no running loop (never in the app): the next upload or restart retries instead
+        pass
 
 
 def enqueue(project_id: uuid.UUID) -> None:
@@ -69,6 +97,10 @@ async def stop() -> None:
         await asyncio.gather(_consumer, return_exceptions=True)
     _consumer, _queue = None, None
     _queued.clear()
+    for handle in _resume_handles.values():
+        handle.cancel()
+    _resume_handles.clear()
+    _paused.clear()
 
 
 async def process_project(project_id: uuid.UUID, sessions: async_sessionmaker[AsyncSession] = SessionLocal) -> None:
@@ -82,12 +114,18 @@ async def process_project(project_id: uuid.UUID, sessions: async_sessionmaker[As
             if row is None:
                 await refresh_project_status(session, project_id)
                 await session.commit()
+                _paused.pop(project_id, None)
                 return
             row.status = "processing"
             await refresh_project_status(session, project_id)
             await session.commit()
             job = (row.id, row.file_path, row.file_type, row.language)
-        await _ingest_file(sessions, project_id, *job)
+        quota = await _ingest_file(sessions, project_id, *job)
+        if quota is not None:  # stop the job; the file went back to `pending` and the job resumes by itself
+            _pause(project_id, quota.daily)
+            log.warning("embedding quota exhausted; ingestion of project %s paused (daily=%s)", project_id, quota.daily)
+            return
+        _paused.pop(project_id, None)
 
 
 def _read_and_chunk(path: Path, file_path: str, file_type: str, language: str | None):
@@ -97,9 +135,12 @@ def _read_and_chunk(path: Path, file_path: str, file_type: str, language: str | 
 async def _ingest_file(
     sessions: async_sessionmaker[AsyncSession], project_id: uuid.UUID,
     file_id: uuid.UUID, file_path: str, file_type: str, language: str | None,
-) -> None:
+) -> EmbeddingQuotaError | None:
+    """Ingest one file. Returns the quota error when the embedding quota ran out (the file is put back to
+    `pending`, not marked failed), otherwise None."""
     provider = get_embedding_provider()
     error: str | None = None
+    quota: EmbeddingQuotaError | None = None
     chunks = []
     try:
         path = settings.data_dir / "projects" / str(project_id) / file_path
@@ -115,7 +156,7 @@ async def _ingest_file(
             async with sessions() as session:
                 row = await session.get(File, file_id)
                 if row is None or row.status != "processing":
-                    return  # deleted or replaced while it was being processed
+                    return None  # deleted or replaced while it was being processed
                 await session.execute(delete(Chunk).where(Chunk.file_id == file_id))
                 chunk_ids = [uuid.uuid4() for _ in chunks]
                 session.add_all(
@@ -135,6 +176,9 @@ async def _ingest_file(
     if error is None:
         try:
             await _index_file(provider, project_id, file_id, file_path, file_type, chunks, chunk_ids)
+        except EmbeddingQuotaError as exc:
+            log.warning("embedding quota exhausted while indexing %s: %r", file_path, exc)
+            error, quota = repr(exc), exc
         except Exception as exc:
             log.warning("could not index %s: %r", file_path, exc)
             error = repr(exc)
@@ -147,11 +191,14 @@ async def _ingest_file(
                 if row is None or row.status != "processing":
                     if row is None:  # deleted mid-flight: don't leave the docs we just wrote
                         await _drop_docs(provider.fingerprint, file_id)
-                    return
+                    return None
                 if error:
                     await session.execute(delete(Chunk).where(Chunk.file_id == file_id))
                     await _drop_docs(provider.fingerprint, file_id)
-                    row.status, row.error_message = "failed", error
+                    if quota is not None:  # not the file's fault: try it again when the quota is back
+                        row.status, row.error_message = "pending", None
+                    else:
+                        row.status, row.error_message = "failed", error
                 else:
                     row.status, row.error_message = "ready", None
                     project = await session.get(Project, project_id)
@@ -159,7 +206,7 @@ async def _ingest_file(
                         project.embedding_fingerprint = provider.fingerprint
                 await refresh_project_status(session, project_id)
                 await session.commit()
-                return
+                return quota
         except Exception as exc:
             if attempt == 2:
                 raise

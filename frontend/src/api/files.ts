@@ -1,7 +1,8 @@
-const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+import { apiFetch, BASE } from "./http";
 
 export interface UploadRules {
   ignored_names: string[];
+  ignored_suffixes?: string[];
   max_file_bytes: number;
   max_total_bytes: number;
   extensions: Record<string, { type: "doc" | "source" | "other"; language: string | null }>;
@@ -34,12 +35,13 @@ export interface ActiveIngestion {
   project_name: string;
   remaining: number;
   total: number;
+  paused_until: string | null;
 }
 
 export interface UploadReport {
   accepted: number;
   rejected: number;
-  results: { path: string; status: "accepted" | "rejected"; reason: string | null }[];
+  results: { path: string; status: "accepted" | "rejected"; reason: string | null; detail?: string | null }[];
   created: string[];
   modified: string[];
   deleted: string[];
@@ -142,7 +144,7 @@ export interface PipelineResult {
 }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, init);
+  const res = await apiFetch(path, init);
   if (!res.ok) throw new Error(res.status === 409 ? "The project is being processed." : "Something went wrong. Please try again.");
   return res.status === 204 ? (undefined as T) : res.json();
 }

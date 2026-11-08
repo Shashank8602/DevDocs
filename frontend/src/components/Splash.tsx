@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-const SHOW_MS = 1000;
-const FADE_MS = 500;
+const SHOW_MS = 600;
+const FADE_MS = 300;
 
-/** Logo splash: shown 1 s, fades out over 0.5 s, then calls onDone. */
+/** Logo splash: shown 0.6 s, fades out over 0.3 s, then calls onDone. */
 export default function Splash({ onDone }: { onDone: () => void }) {
   const [fading, setFading] = useState(false);
 

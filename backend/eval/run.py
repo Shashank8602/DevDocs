@@ -36,6 +36,7 @@ import httpx
 import numpy as np
 from sqlalchemy import select
 
+from app.access import SYSTEM_ADMIN
 from app.config import REPO_ROOT, settings
 from app.db import SessionLocal
 from app.ingestion import worker
@@ -239,6 +240,8 @@ async def main() -> int:
         pid, name = await _find_project(existing)
         label = f"existing project {name!r}"
     else:
+        from app.auth_deps import current_user
+        app.dependency_overrides[current_user] = lambda: SYSTEM_ADMIN  # the eval is an offline tool, not a person
         client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://eval", timeout=300)
         sample_pid = await _ingest(client, REPO_ROOT / data["project"])
         pid = uuid.UUID(sample_pid)
@@ -269,7 +272,7 @@ async def main() -> int:
             rows = []
             for i, q in enumerate(questions, 1):
                 trace = await pipeline.run(
-                    session, pid, q["q"], gate_threshold=-math.inf, relative_cutoff=0, rerank_top_n=0,
+                    session, pid, q["q"], viewer=SYSTEM_ADMIN, gate_threshold=-math.inf, relative_cutoff=0, rerank_top_n=0,
                 )
                 ranked = [c for c in trace.candidates if _norm(c.file_path, prefix) not in exclude]
                 scores = [c.vector_score for c in ranked if c.vector_score is not None]

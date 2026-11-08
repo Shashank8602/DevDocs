@@ -14,8 +14,9 @@ from elasticsearch import ApiError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import access
 from app.config import settings
-from app.models import Chunk, File, Project
+from app.models import Chunk, File, Project, User
 from app.providers.embeddings import EmbeddingError, get_embedding_provider
 from app.retrieval.bm25 import Hit, bm25_search
 from app.retrieval.fusion import FusedHit, apply_test_prior, rrf_fuse
@@ -92,10 +93,11 @@ async def _with_retries(call, what: str):
 
 async def run(
     session: AsyncSession, project_id: uuid.UUID, query: str,
-    *, gate_threshold: float | None = None, relative_cutoff: float | None = None,
+    *, viewer: User, gate_threshold: float | None = None, relative_cutoff: float | None = None,
     rerank_top_n: int | None = None, reranker: Reranker | None = None,
 ) -> RetrievalTrace:
-    """Every keyword defaults to its setting; the eval and the Playground override them per call."""
+    """Every keyword defaults to its setting; the eval and the Playground override them per call.
+    `viewer` is required on purpose: retrieval only ever sees the files that person may read."""
     gate_threshold = settings.gate_vector_threshold if gate_threshold is None else gate_threshold
     relative_cutoff = settings.relative_cutoff if relative_cutoff is None else relative_cutoff
     rerank_top_n = settings.rerank_top_n if rerank_top_n is None else rerank_top_n
@@ -105,10 +107,12 @@ async def run(
         gate_threshold=gate_threshold, relative_cutoff=relative_cutoff,
     )
 
-    # 1. Eligible set: this project's READY files, from Postgres (never from the client).
-    ready = (await session.execute(
+    # 1. Eligible set: this project's READY files the viewer may read, from Postgres (never from the client).
+    #    It goes into both ES queries as a filter, so a forbidden file cannot even crowd out a permitted one.
+    allowed = set(await access.readable_file_ids(session, viewer, project_id, ready_only=True))
+    ready = [r for r in (await session.execute(
         select(File.id, File.file_type).where(File.project_id == project_id, File.status == "ready")
-    )).all()
+    )).all() if r[0] in allowed]
     ready_ids = [r[0] for r in ready]
     file_types = {str(r[0]): r[1] for r in ready}
     trace.ready_files = len(ready_ids)
@@ -145,7 +149,7 @@ async def run(
         str(c.id): c for c in (await session.scalars(
             select(Chunk).join(File, File.id == Chunk.file_id).where(
                 Chunk.id.in_([uuid.UUID(f.chunk_id) for f in trace.fused]),
-                Chunk.project_id == project_id, File.status == "ready",
+                Chunk.project_id == project_id, File.status == "ready", File.id.in_(ready_ids),
             )
         )).all()
     }
@@ -192,9 +196,9 @@ async def run(
 
 
 async def retrieve(
-    session: AsyncSession, project_id: uuid.UUID, query: str, *, reranker: Reranker | None = None,
+    session: AsyncSession, project_id: uuid.UUID, query: str, *, viewer: User, reranker: Reranker | None = None,
 ) -> list[Candidate] | NoRelevantContext:
-    trace = await run(session, project_id, query, reranker=reranker)
+    trace = await run(session, project_id, query, viewer=viewer, reranker=reranker)
     if not trace.final:
         log.info("no relevant context for project %s (%d candidates): %s",
                  project_id, len(trace.candidates), trace.reason)

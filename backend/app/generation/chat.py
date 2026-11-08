@@ -27,10 +27,11 @@ from app.generation import inspector, memory
 from app.generation.citations import build_citations
 from app.generation.context_builder import build_messages
 from app.generation.prompts import GENERIC_ERROR, NO_CONTEXT_REPLY
-from app.models import Conversation, Message
+from app.models import AuditLog, Conversation, Message, User
 from app.providers.llm import LLMError, estimate_prompt_tokens, get_llm_provider
 from app.retrieval.pipeline import NoRelevantContext, RetrievalError, retrieve
 from app.retrieval.query import retrieval_query
+from app.retrieval.selection import Candidate
 
 log = logging.getLogger("devdocs.chat")
 
@@ -59,6 +60,25 @@ async def _save_answer(
         )
         await session.commit()
         return answer.id
+
+
+async def _audit(
+    sessions: async_sessionmaker[AsyncSession], project_id: uuid.UUID, user: User | None,
+    conversation_id: uuid.UUID | None, question: str, outcome: str, served: list | None = None,
+) -> None:
+    """One audit row per question: who asked, what, which files were served, and how it ended. Never raises:
+    the audit log must not be the reason an answer fails (a failure is logged loudly instead)."""
+    try:
+        async with sessions() as session:
+            session.add(AuditLog(
+                project_id=project_id, user_id=user.id if user else None, user_email=user.email if user else "unknown",
+                conversation_id=conversation_id, question=question, outcome=outcome,
+                served_file_ids=list(dict.fromkeys(str(c.file_id) for c in served or [])),
+                served_paths=list(dict.fromkeys(c.file_path for c in served or [])),
+            ))
+            await session.commit()
+    except Exception:
+        log.exception("could not write the audit row for conversation %s", conversation_id)
 
 
 async def _set_state(sessions: async_sessionmaker[AsyncSession], user_message_id: uuid.UUID, state: str) -> None:
@@ -102,28 +122,44 @@ async def _generate(messages: list[dict[str, str]]) -> AsyncIterator[str]:
 
 async def stream_answer(
     sessions: async_sessionmaker[AsyncSession], project_id: uuid.UUID, conversation_id: uuid.UUID,
-    user_message_id: uuid.UUID, question: str,
+    user_message_id: uuid.UUID, question: str, user_id: uuid.UUID, pinned: Candidate | None = None,
 ) -> AsyncIterator[Event]:
     end_state = "failed"  # what the user message ends as unless the turn completes or is stopped
     started = time.perf_counter()
+    audited = False
+    viewer: User | None = None
     try:
         async with sessions() as session:
+            viewer = await session.get(User, user_id)
+            if viewer is None:
+                raise RetrievalError("the asking user no longer exists")
             summary, history = await memory.load_memory(session, conversation_id, exclude=user_message_id)
             # fresh retrieval for every question; a follow-up borrows the previous question's topic
             search_text = retrieval_query(question, [c for r, c in history if r == "user"])
             if _fault(settings.fault_retrieval):
                 raise RetrievalError("injected retrieval fault")
-            result = await retrieve(session, project_id, search_text)
+            result = await retrieve(session, project_id, search_text, viewer=viewer)
         retrieved_ms = (time.perf_counter() - started) * 1000
+        if pinned is not None:
+            # "Ask about these lines": the selection leads the context; normal retrieval adds to it when it found
+            # anything, and its absence no longer means a refusal because the question is about the selection.
+            rest = [c for c in result if isinstance(result, list) and c.file_id != pinned.file_id] if isinstance(result, list) else []
+            result = [pinned, *rest][: max(settings.retrieval_final_top_k, 1)]
 
         if isinstance(result, NoRelevantContext):
             log.info("LLM not called for conversation %s: %s", conversation_id, result.reason)
+            await _audit(sessions, project_id, viewer, conversation_id, question, "refused")
+            audited = True
             message_id = await _save_answer(sessions, conversation_id, user_message_id, NO_CONTEXT_REPLY)
             end_state = "answered"
             yield Event("no_context", {"message_id": str(message_id), "content": NO_CONTEXT_REPLY})
             return
 
-        messages = build_messages(question, result, history, summary)
+        await _audit(sessions, project_id, viewer, conversation_id, question, "served", result)
+        audited = True
+        messages = build_messages(
+            question, result[1:] if pinned is not None else result, history, summary, pinned=pinned,
+        )
         sources = build_citations(result)
         inspector.record(
             conversation_id, question=question, search_text=search_text, messages=messages,
@@ -175,8 +211,81 @@ async def stream_answer(
         log.exception("unexpected error answering conversation %s", conversation_id)
         yield Event("error", {"message": GENERIC_ERROR})
     finally:
+        if not audited:  # failed or stopped before any context was served
+            await asyncio.shield(_audit(sessions, project_id, viewer, conversation_id, question, "error"))
         if end_state != "answered":
             try:
                 await asyncio.shield(_set_state(sessions, user_message_id, end_state))
             except Exception:
                 log.exception("could not record gen_state=%s for message %s", end_state, user_message_id)
+
+
+async def _tokens_with_retry(messages: list[dict[str, str]]) -> AsyncIterator[str]:
+    """`_generate` with the same silent retry as a chat turn: a failure before the first token is retried."""
+    started = False
+    for attempt in range(settings.generation_retries + 1):
+        try:
+            if _fault(settings.fault_llm, attempt):
+                raise LLMError("injected LLM fault")
+            async for token in _generate(messages):
+                started = True
+                yield token
+            return
+        except LLMError as exc:
+            if started or attempt == settings.generation_retries:
+                raise  # after the first token nothing can be retried invisibly
+            log.warning("LLM attempt %d failed before the first token (%s); retrying", attempt + 1, exc)
+            await asyncio.sleep(min(0.5 * 2 ** attempt, 2.0))
+
+
+async def stream_selection_answer(
+    sessions: async_sessionmaker[AsyncSession], project_id: uuid.UUID, user_id: uuid.UUID,
+    question: str, pinned: Candidate,
+) -> AsyncIterator[Event]:
+    """"Ask about these lines" from the file viewer: the same grounding as a chat turn, but ephemeral. No
+    conversation or message is created or saved; the answer exists only in the response stream. The selection
+    always leads the context, so the answer never depends on the question passing the retrieval gate.
+
+        [waiting] token*  ->  sources -> done | error
+    """
+    audited = False
+    viewer: User | None = None
+    try:
+        async with sessions() as session:
+            viewer = await session.get(User, user_id)
+            if viewer is None:
+                raise RetrievalError("the asking user no longer exists")
+            rest: list[Candidate] = []
+            try:
+                # the question alone ("Explain this") says little, so the selected code joins the search text
+                found = await retrieve(session, project_id, f"{question}\n{pinned.content[:600]}", viewer=viewer)
+                if isinstance(found, list):
+                    rest = [c for c in found if c.file_id != pinned.file_id][: max(settings.retrieval_final_top_k - 1, 0)]
+            except RetrievalError as exc:  # the selection is enough to answer from; extra context is a bonus
+                log.warning("retrieval failed for a selection question, answering from the selection alone: %s", exc)
+        served = [pinned, *rest]
+        await _audit(sessions, project_id, viewer, None, question, "served", served)
+        audited = True
+        messages = build_messages(question, rest, [], None, pinned=pinned)
+        wait = get_llm_provider().wait_estimate(messages)
+        if wait >= 1:
+            yield Event("waiting", {"seconds": round(wait)})
+        parts: list[str] = []
+        async for token in _tokens_with_retry(messages):
+            parts.append(token)
+            yield Event("token", {"text": token})
+        if not "".join(parts).strip():
+            raise LLMError("the model returned no content")
+        yield Event("sources", {"sources": build_citations(served)})
+        yield Event("done", {})
+    except (asyncio.CancelledError, GeneratorExit):
+        raise  # the panel was closed or Stop was pressed; there is nothing to save
+    except (RetrievalError, LLMError) as exc:
+        log.warning("selection answer failed for project %s: %s", project_id, exc)
+        yield Event("error", {"message": GENERIC_ERROR})
+    except Exception:
+        log.exception("unexpected error answering a selection question in project %s", project_id)
+        yield Event("error", {"message": GENERIC_ERROR})
+    finally:
+        if not audited:
+            await asyncio.shield(_audit(sessions, project_id, viewer, None, question, "error"))

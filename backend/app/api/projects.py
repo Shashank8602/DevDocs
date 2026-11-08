@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import access
 from app.api.files import project_dir
+from app.auth_deps import current_user, project_for, require_admin
 from app.db import get_session, get_session_factory
-from app.ingestion import reindex
-from app.models import File, Project
+from app.ingestion import reindex, worker
+from app.models import File, Project, User
 from app.providers.embeddings import get_embedding_provider
 from app.schemas import LanguageCount, ProjectCreate, ProjectOut, ProjectOverview, ProjectUpdate
 from app.search import indexer
@@ -25,43 +27,56 @@ async def _get_or_404(session: AsyncSession, project_id: uuid.UUID) -> Project:
     return project
 
 
-async def _out(session: AsyncSession, project: Project) -> ProjectOut:
+async def _out(session: AsyncSession, project: Project, user: User) -> ProjectOut:
+    """file_count is the number of files *this user* can read, so a restricted file is not even counted."""
     out = ProjectOut.model_validate(project)
-    out.file_count = await session.scalar(select(func.count()).where(File.project_id == project.id)) or 0
+    out.file_count = len(await access.readable_files(session, user, project.id))
+    paused = worker.paused_until(project.id) if project.status == "processing" else None
+    if paused:
+        out.paused_until, out.paused_daily_quota = paused
     return out
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
-async def create_project(body: ProjectCreate, session: AsyncSession = Depends(get_session)):
+async def create_project(
+    body: ProjectCreate, admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session),
+):
     project = Project(name=body.name, description=body.description or None)
     session.add(project)
     await session.commit()
     await session.refresh(project)
-    return await _out(session, project)
+    return await _out(session, project, admin)
 
 
 @router.get("", response_model=list[ProjectOut])
-async def list_projects(session: AsyncSession = Depends(get_session)):
-    result = await session.scalars(select(Project).order_by(Project.updated_at.desc()))
-    return [await _out(session, p) for p in result.all()]
+async def list_projects(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
+    projects = (await session.scalars(select(Project).order_by(Project.updated_at.desc()))).all()
+    visible = await access.visible_project_ids(session, user, [p.id for p in projects])
+    return [await _out(session, p, user) for p in projects if p.id in visible]
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
-async def get_project(project_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
-    return await _out(session, await _get_or_404(session, project_id))
+async def get_project(
+    project_id: uuid.UUID, user: User = Depends(current_user), session: AsyncSession = Depends(get_session),
+):
+    return await _out(session, await project_for(session, user, project_id), user)
 
 
 @router.get("/{project_id}/overview", response_model=ProjectOverview)
-async def project_overview(project_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
-    await _get_or_404(session, project_id)
+async def project_overview(
+    project_id: uuid.UUID, user: User = Depends(current_user), session: AsyncSession = Depends(get_session),
+):
+    await project_for(session, user, project_id)
+    allowed = await access.readable_file_ids(session, user, project_id)  # counts never include hidden files
+    scope = (File.project_id == project_id, File.id.in_(allowed))
     by_type = dict((await session.execute(
-        select(File.file_type, func.count()).where(File.project_id == project_id).group_by(File.file_type)
+        select(File.file_type, func.count()).where(*scope).group_by(File.file_type)
     )).all())
     langs = (await session.execute(
-        select(File.language, func.count()).where(File.project_id == project_id, File.language.is_not(None))
+        select(File.language, func.count()).where(*scope, File.language.is_not(None))
         .group_by(File.language).order_by(func.count().desc(), File.language)
     )).all()
-    last = await session.scalar(select(func.max(File.updated_at)).where(File.project_id == project_id))
+    last = await session.scalar(select(func.max(File.updated_at)).where(*scope))
     return ProjectOverview(
         file_count=sum(by_type.values()),
         by_type={t: by_type.get(t, 0) for t in ("doc", "source", "other")},
@@ -72,7 +87,8 @@ async def project_overview(project_id: uuid.UUID, session: AsyncSession = Depend
 
 @router.patch("/{project_id}", response_model=ProjectOut)
 async def update_project(
-    project_id: uuid.UUID, body: ProjectUpdate, session: AsyncSession = Depends(get_session)
+    project_id: uuid.UUID, body: ProjectUpdate, admin: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
 ):
     project = await _get_or_404(session, project_id)
     changes = body.model_dump(exclude_unset=True)
@@ -82,11 +98,13 @@ async def update_project(
         setattr(project, field, (value or None) if field == "description" else value)
     await session.commit()
     await session.refresh(project)
-    return await _out(session, project)
+    return await _out(session, project, admin)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_project(project_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def delete_project(
+    project_id: uuid.UUID, _: User = Depends(require_admin), session: AsyncSession = Depends(get_session),
+):
     # Dependent rows cascade in Postgres; the project's ES docs are removed afterwards.
     project = await _get_or_404(session, project_id)
     fingerprint = project.embedding_fingerprint or get_embedding_provider().fingerprint
@@ -102,7 +120,7 @@ async def delete_project(project_id: uuid.UUID, session: AsyncSession = Depends(
 
 @router.post("/{project_id}/reindex", status_code=status.HTTP_202_ACCEPTED)
 async def start_reindex(
-    project_id: uuid.UUID, session: AsyncSession = Depends(get_session),
+    project_id: uuid.UUID, _: User = Depends(require_admin), session: AsyncSession = Depends(get_session),
     sessions=Depends(get_session_factory),
 ):
     """Re-embed the project's stored chunks into the index of the current embedding settings (no re-upload,
@@ -118,6 +136,8 @@ async def start_reindex(
 
 
 @router.get("/{project_id}/reindex")
-async def reindex_progress(project_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def reindex_progress(
+    project_id: uuid.UUID, _: User = Depends(require_admin), session: AsyncSession = Depends(get_session),
+):
     await _get_or_404(session, project_id)
     return reindex.progress_of(project_id)

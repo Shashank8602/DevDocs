@@ -24,6 +24,15 @@ class EmbeddingError(Exception):
     """Embedding failed after retries. The message is internal; users only see a generic failure."""
 
 
+class EmbeddingQuotaError(EmbeddingError):
+    """HTTP 429 that survived every retry: the provider's quota is spent, which is not the file's fault.
+    `daily` is True when it is the per-day quota (it will not come back within minutes)."""
+
+    def __init__(self, message: str, daily: bool = False):
+        super().__init__(message)
+        self.daily = daily
+
+
 class EmbeddingProvider(Protocol):
     provider: str
     model: str
@@ -119,6 +128,9 @@ class GeminiEmbeddingProvider:
                     raise EmbeddingError("embedding response did not match the request")
                 return vectors
             retryable = resp.status_code == 429 or resp.status_code >= 500
+            if resp.status_code == 429 and attempt == self.max_retries:
+                daily = "perday" in resp.text.lower().replace(" ", "").replace("_", "")
+                raise EmbeddingQuotaError(f"embedding quota exhausted: HTTP 429 {resp.text[:200]}", daily=daily)
             if not retryable or attempt == self.max_retries:
                 raise EmbeddingError(f"embedding request failed: HTTP {resp.status_code} {resp.text[:200]}")
             wait = _retry_after(resp) or self.backoff * 2 ** attempt

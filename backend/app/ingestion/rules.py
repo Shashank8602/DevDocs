@@ -6,6 +6,7 @@ from pathlib import Path, PurePosixPath
 _RULES = json.loads((Path(__file__).parent / "upload_rules.json").read_text("utf-8"))
 
 IGNORED_NAMES: frozenset[str] = frozenset(_RULES["ignored_names"])
+IGNORED_SUFFIXES: tuple[str, ...] = tuple(_RULES.get("ignored_suffixes", []))  # minified / bundled / lock files
 MAX_FILE_BYTES: int = _RULES["max_file_bytes"]
 MAX_TOTAL_BYTES: int = _RULES["max_total_bytes"]
 EXTENSIONS: dict[str, dict] = _RULES["extensions"]
@@ -37,6 +38,8 @@ def rejection_reason(path: str, size: int) -> str | None:
     pure = PurePosixPath(path)
     if any(part in IGNORED_NAMES for part in pure.parts):
         return "ignored"
+    if pure.name.lower().endswith(IGNORED_SUFFIXES):
+        return "generated_file"
     if pure.suffix.lower() not in EXTENSIONS:
         return "unsupported_type"
     if size > MAX_FILE_BYTES:

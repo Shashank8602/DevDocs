@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 import { filesApi, PipelineHit, PlaygroundHit } from "../../api/files";
 import Modal from "../Modal";
+import { Icon, Spinner } from "../ui";
 
 const DROPPED_LABEL: Record<string, string> = {
   gate: "question refused by the gate",
@@ -32,7 +33,7 @@ function LegColumn({ title, hits, empty }: { title: string; hits: PlaygroundHit[
       ) : (
         <ol className="space-y-1">
           {hits.map((h) => (
-            <li key={h.chunk_id} className="flex flex-wrap gap-x-3 rounded border border-slate-200 px-2 py-1 text-xs text-slate-600">
+            <li key={h.chunk_id} className="flex flex-wrap gap-x-3 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600">
               <span className="font-medium">#{h.rank}</span>
               <Location h={h} />
               <span className="ml-auto tabular-nums">score {h.score.toFixed(3)}</span>
@@ -46,8 +47,8 @@ function LegColumn({ title, hits, empty }: { title: string; hits: PlaygroundHit[
 
 function CandidateRow({ h }: { h: PipelineHit }) {
   return (
-    <li className={`min-w-0 overflow-hidden rounded-md border ${h.kept ? "border-green-300" : "border-slate-200"}`}>
-      <div className={`flex flex-wrap gap-x-3 gap-y-0.5 px-2 py-1 text-xs ${h.kept ? "bg-green-50 text-green-900" : "bg-slate-50 text-slate-600"}`}>
+    <li className={`min-w-0 overflow-hidden rounded-lg border ${h.kept ? "border-emerald-500/40" : "border-slate-200"}`}>
+      <div className={`flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 py-1.5 text-xs ${h.kept ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-600"}`}>
         <span className="font-medium">#{h.rank}</span>
         <Location h={h} />
         <span className="tabular-nums">BM25 {h.bm25_rank ?? "–"} · vec {h.vector_rank ?? "–"} · RRF {h.rrf_score.toFixed(4)}</span>
@@ -59,7 +60,7 @@ function CandidateRow({ h }: { h: PipelineHit }) {
           {h.kept ? `kept · ${h.token_count} tok` : `dropped: ${DROPPED_LABEL[h.dropped_by ?? ""] ?? h.dropped_by}`}
         </span>
       </div>
-      <pre className="max-h-24 overflow-auto whitespace-pre-wrap break-words p-2 text-xs">{h.content}</pre>
+      <pre className="selectable-text max-h-24 overflow-auto whitespace-pre-wrap break-words p-2 text-xs">{h.content}</pre>
     </li>
   );
 }
@@ -89,7 +90,7 @@ export default function RetrievalPlayground({ projectId, onClose }: { projectId:
           onChange={(e) => setQ(e.target.value)}
           placeholder="e.g. validate_token, or: where do we verify the user's identity"
           aria-label="Query"
-          className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="input min-w-0 flex-1 basis-64"
         />
         <input
           value={gate}
@@ -97,7 +98,7 @@ export default function RetrievalPlayground({ projectId, onClose }: { projectId:
           placeholder={r ? `gate (${r.gate_threshold})` : "gate (default)"}
           aria-label="Gate threshold override"
           inputMode="decimal"
-          className="w-32 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="input w-36"
         />
         <input
           value={cutoff}
@@ -105,14 +106,10 @@ export default function RetrievalPlayground({ projectId, onClose }: { projectId:
           placeholder={r ? `cut-off (${r.relative_cutoff})` : "cut-off (default)"}
           aria-label="Relative cut-off override"
           inputMode="decimal"
-          className="w-32 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="input w-36"
         />
-        <button
-          type="submit"
-          disabled={search.isPending || !q.trim()}
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
-        >
-          {search.isPending ? "Searching…" : "Search"}
+        <button type="submit" disabled={search.isPending || !q.trim()} className="btn-primary">
+          {search.isPending ? <Spinner /> : <Icon name="search" />} {search.isPending ? "Searching…" : "Search"}
         </button>
       </form>
       {search.isError && <p className="mt-3 text-sm text-red-600">Search failed. Is DEV_MODE=true on the backend?</p>}
@@ -130,8 +127,8 @@ export default function RetrievalPlayground({ projectId, onClose }: { projectId:
           {r.error && <p className="mt-2 text-sm text-red-600">{r.error}</p>}
 
           <div
-            className={`mt-3 rounded-md border px-3 py-2 text-sm font-medium ${
-              r.no_relevant_context ? "border-amber-300 bg-amber-50 text-amber-900" : "border-green-300 bg-green-50 text-green-900"
+            className={`mt-3 rounded-lg border px-3 py-2 text-sm font-medium ${
+              r.no_relevant_context ? "border-amber-500/30 bg-amber-50 text-amber-700" : "border-emerald-500/30 bg-emerald-50 text-emerald-700"
             }`}
           >
             {r.no_relevant_context

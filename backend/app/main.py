@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import settings_store
-from app.api import conversations, dev, files, meta, projects, settings as settings_api
+from app.api import access as access_api, auth, conversations, dev, files, insights, meta, projects, settings as settings_api
 from app.config import settings
 from app.db import SessionLocal, engine, ping_postgres
 from app.ingestion import worker
@@ -42,16 +42,20 @@ app = FastAPI(title="DevDocs", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
+    allow_credentials=True,  # the session cookie travels with fetch(..., credentials: "include")
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(files.router)
 app.include_router(meta.router)
 app.include_router(conversations.router)
 app.include_router(settings_api.router)
+app.include_router(access_api.router)
+app.include_router(insights.router)
 app.include_router(dev.router)
 
 

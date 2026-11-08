@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { filesApi } from "../../api/files";
 import Modal from "../Modal";
+import { Badge, Icon, Spinner } from "../ui";
 import VectorPeek from "./VectorPeek";
 
 const STATUS_LABEL: Record<string, string> = { pending: "Pending", processing: "Processing", ready: "Ready", failed: "Failed" };
@@ -20,23 +21,20 @@ export default function ESInspector({ projectId, onClose }: { projectId: string;
   return (
     <Modal title="ES Inspector" onClose={onClose} wide>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="min-w-0 truncate text-xs text-slate-500">ES index: {data?.index ?? "…"}</p>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:opacity-50"
-        >
-          {isFetching ? "Refreshing…" : "Refresh"}
+        <p className="flex min-w-0 items-center gap-1.5 truncate text-xs text-slate-500"><Icon name="database" className="h-3.5 w-3.5 shrink-0" /> ES index: <span className="font-mono">{data?.index ?? "…"}</span></p>
+        <button onClick={() => refetch()} disabled={isFetching} className="btn-secondary px-3 py-1.5">
+          {isFetching ? <Spinner /> : <Icon name="refresh" />} {isFetching ? "Refreshing…" : "Refresh"}
         </button>
       </div>
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="flex items-center gap-2 text-sm text-slate-500"><Spinner /> Loading…</p>}
       {isError && <p className="text-sm text-red-600">Couldn't load the inspector. Is DEV_MODE=true on the backend?</p>}
       {data && (
         <>
-          <p className="mb-3 text-sm text-slate-700">
-            Total chunks — Postgres: <b>{data.totals.postgres}</b> · Elasticsearch: <b>{data.totals.es}</b>{" "}
-            <span className={inSync ? "text-green-700" : "text-red-600"}>{inSync ? "✔ in sync" : "✖ out of sync"}</span>
-          </p>
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-slate-700">
+            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5">Postgres chunks <b className="tabular-nums">{data.totals.postgres}</b></span>
+            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5">Elasticsearch chunks <b className="tabular-nums">{data.totals.es}</b></span>
+            <Badge tone={inSync ? "success" : "danger"} dot>{inSync ? "In sync" : "Out of sync"}</Badge>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -59,24 +57,26 @@ export default function ESInspector({ projectId, onClose }: { projectId: string;
                 const ok = f.postgres_chunks === f.es_chunks;
                 return (
                   <Fragment key={f.file_id}>
-                    <tr className="border-b border-slate-100">
-                      <td className="max-w-[18rem] truncate py-1 pr-3" title={f.path}>{f.path}</td>
-                      <td className="py-1 pr-3">{STATUS_LABEL[f.status] ?? f.status}</td>
-                      <td className="py-1 pr-3 text-right tabular-nums">{f.postgres_chunks}</td>
-                      <td className="py-1 pr-3 text-right tabular-nums">{f.es_chunks}</td>
-                      <td className="py-1 pr-3">
+                    <tr className="border-b border-slate-100 hover:bg-slate-100/50">
+                      <td className="max-w-[18rem] truncate py-1.5 pr-3 font-mono text-xs" title={f.path}>{f.path}</td>
+                      <td className="py-1.5 pr-3 text-xs">{STATUS_LABEL[f.status] ?? f.status}</td>
+                      <td className="py-1.5 pr-3 text-right tabular-nums">{f.postgres_chunks}</td>
+                      <td className="py-1.5 pr-3 text-right tabular-nums">{f.es_chunks}</td>
+                      <td className="py-1.5 pr-3">
                         {ready ? (
-                          ok ? <span className="text-green-700">✔</span> : <span className="font-medium text-red-600">✖</span>
+                          ok
+                            ? <Icon name="check" className="h-4 w-4 text-emerald-700" />
+                            : <span className="flex items-center gap-1 font-medium text-red-600"><Icon name="x" className="h-4 w-4" /><span className="sr-only">mismatch</span></span>
                         ) : (
-                          <span className="text-slate-400">– {f.status === "failed" ? "" : "(not indexed yet)"}</span>
+                          <span className="text-xs text-slate-400">– {f.status === "failed" ? "" : "(not indexed yet)"}</span>
                         )}
                       </td>
-                      <td className="py-1">
+                      <td className="py-1.5">
                         {f.es_chunks > 0 ? (
                           <button
                             onClick={() => setPeeking(peeking === f.file_id ? null : f.file_id)}
                             aria-expanded={peeking === f.file_id}
-                            className="rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-100"
+                            className="btn-secondary px-2 py-0.5 text-xs"
                           >
                             {peeking === f.file_id ? "Hide" : "Peek"}
                           </button>
@@ -101,7 +101,7 @@ export default function ESInspector({ projectId, onClose }: { projectId: string;
             {data.orphans.length === 0 ? (
               <p className="text-slate-600">Orphans in ES (docs whose file no longer exists in Postgres): none</p>
             ) : (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
                 <p className="font-medium">Orphans in ES: {data.orphans.reduce((n, o) => n + o.es_chunks, 0)} doc(s)</p>
                 <ul className="mt-1 text-xs">
                   {data.orphans.map((o) => (

@@ -1,7 +1,9 @@
-const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+import { apiFetch } from "./http";
 
 export interface SourceRef {
-  file_id: string;
+  /** null for a citation whose file the person can no longer read ("Source no longer available"). */
+  file_id: string | null;
+  available?: boolean;
   file_path: string;
   file_type: "doc" | "source" | "other" | null;
   ranges: [number, number][];
@@ -35,7 +37,7 @@ export type ChatEvent =
   | { type: "waiting"; seconds: number }
   | { type: "token"; text: string }
   | { type: "sources"; sources: SourceRef[] }
-  | { type: "done"; message_id: string }
+  | { type: "done"; message_id?: string }
   | { type: "no_context"; message_id: string; content: string }
   | { type: "error"; message: string };
 
@@ -55,14 +57,21 @@ export interface ContextInspection {
 }
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await apiFetch(path);
   if (!res.ok) throw new Error("Something went wrong. Please try again.");
   return res.json();
 }
 
+/** Lines the person selected in the file viewer; the server re-checks access and reads them itself. */
+export interface AskSelection {
+  file_id: string;
+  line_start: number;
+  line_end: number;
+}
+
 /** POSTs and yields the SSE events as they arrive. Throws on a non-2xx response; abort with `signal`. */
 export async function* streamPost(path: string, body: unknown, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -94,16 +103,19 @@ export const chatApi = {
   conversations: (projectId: string) => getJson<ConversationSummary[]>(`/projects/${projectId}/conversations`),
   conversation: (id: string) => getJson<ConversationDetail>(`/conversations/${id}`),
   context: (id: string) => getJson<ContextInspection>(`/conversations/${id}/context`),
-  start: (projectId: string, content: string, signal?: AbortSignal) =>
-    streamPost(`/projects/${projectId}/conversations`, { content }, signal),
-  send: (conversationId: string, content: string, signal?: AbortSignal) =>
-    streamPost(`/conversations/${conversationId}/messages`, { content }, signal),
+  start: (projectId: string, content: string, signal?: AbortSignal, selection?: AskSelection) =>
+    streamPost(`/projects/${projectId}/conversations`, { content, selection }, signal),
+  send: (conversationId: string, content: string, signal?: AbortSignal, selection?: AskSelection) =>
+    streamPost(`/conversations/${conversationId}/messages`, { content, selection }, signal),
+  /** Select and ask: streams an answer about lines of one file. Nothing is saved (no conversation, no message). */
+  askLines: (fileId: string, content: string, lines: { line_start: number; line_end: number }, signal?: AbortSignal) =>
+    streamPost(`/files/${fileId}/ask`, { content, ...lines }, signal),
   retry: (messageId: string, signal?: AbortSignal) => streamPost(`/messages/${messageId}/retry`, undefined, signal),
   dismiss: async (messageId: string) => {
-    await fetch(`${BASE}/messages/${messageId}/dismiss`, { method: "POST" });
+    await apiFetch(`/messages/${messageId}/dismiss`, { method: "POST" });
   },
   remove: async (conversationId: string) => {
-    const res = await fetch(`${BASE}/conversations/${conversationId}`, { method: "DELETE" });
+    const res = await apiFetch(`/conversations/${conversationId}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Couldn't delete the conversation.");
   },
 };

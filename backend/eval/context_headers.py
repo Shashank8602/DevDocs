@@ -11,6 +11,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.access import SYSTEM_ADMIN
 from app.db import SessionLocal
 from app.models import Chunk, File
 from app.providers.embeddings import EmbeddingError, get_embedding_provider
@@ -106,7 +107,7 @@ async def evaluate():
                 # one run with the gate off records top similarity; thresholds are replayed from the traces
                 traces = []
                 for q in qs:
-                    t = await pipeline.run(s, pid, q["q"], gate_threshold=-1.0)
+                    t = await pipeline.run(s, pid, q["q"], viewer=SYSTEM_ADMIN, gate_threshold=-1.0)
                     traces.append((q, t))
             for g in gates:
                 ans, off = [], []

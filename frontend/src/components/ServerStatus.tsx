@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-
-const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+import { BASE } from "../api/http";
 
 interface Health { postgres: string; elasticsearch: string }
 
@@ -44,8 +43,8 @@ export default function ServerStatus() {
     <span
       role="status"
       title={detail}
-      className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium ${textTone} ${
-        ok || (!data && !isError) ? "border-slate-200" : "border-red-500/40 bg-red-500/10"
+      className={`flex h-8 items-center gap-2 rounded-full border px-2.5 text-xs font-medium ${textTone} ${
+        ok || (!data && !isError) ? "border-transparent sm:border-slate-200" : "border-red-500/40 bg-red-500/10"
       }`}
     >
       <span className="relative flex h-2 w-2">

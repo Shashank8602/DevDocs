@@ -9,13 +9,15 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import access
+from app.auth_deps import current_user, dev_admin_only, file_for, project_for, require_admin
 from app.config import settings
 from app.db import get_session
-from app.ingestion import rules, worker
+from app.ingestion import rules, safety, worker
 from app.ingestion.change_detection import Diff, diff
 from app.ingestion.hashing import copy_and_hash
 from app.ingestion.status import refresh_project_status
-from app.models import Chunk, File, Project
+from app.models import Chunk, File, Project, User
 from app.providers.embeddings import get_embedding_provider
 from app.search import indexer
 from app.schemas import ChunkOut, FileOut, FileReplaceResult, UploadReport, UploadResultItem
@@ -43,7 +45,7 @@ async def remove_es_docs(project: Project | None, file_id: uuid.UUID) -> None:
 
 
 @router.get("/upload-rules")
-async def get_upload_rules():
+async def get_upload_rules(_: User = Depends(current_user)):
     return rules.rules_payload()
 
 
@@ -53,6 +55,27 @@ def _stage(upload_file: UploadFile, staging: Path, n: int) -> tuple[Path, str, i
     with staged.open("wb") as out:
         digest, size = copy_and_hash(upload_file.file, out)
     return staged, digest, size
+
+
+def _content_problem(path: str, staged: Path) -> tuple[str, str | None] | None:
+    """(reason, detail) when the staged file must be skipped for what is inside it: a credential (it would be
+    sent to the embedding and chat providers) or generated / minified code (it only burns embedding quota)."""
+    file_type = rules.classify(path).file_type
+    data = staged.read_bytes()[: safety.SCAN_BYTES + 4096] if staged.stat().st_size <= safety.SCAN_BYTES else _head_and_tail(staged)
+    secret = safety.find_secret(path, data, file_type)
+    if secret:
+        return "possible_secret", f"looks like {secret}"
+    if safety.looks_generated(data, file_type):
+        return "generated_file", None
+    return None
+
+
+def _head_and_tail(staged: Path) -> bytes:
+    """For a big file: the first SCAN_BYTES, plus the last 2 KB (where a source-map footer sits)."""
+    with staged.open("rb") as fh:
+        head = fh.read(safety.SCAN_BYTES)
+        fh.seek(-2048, 2)
+        return head + fh.read()
 
 
 def _place(staged: Path, target: Path) -> None:
@@ -72,6 +95,7 @@ async def upload(
     project_id: uuid.UUID,
     files: list[UploadFile] = FormFile(...),
     paths: list[str] = Form(...),
+    _: User = Depends(require_admin),
     session: AsyncSession = Depends(get_session),
 ):
     """Upload or re-upload a whole folder. The upload is compared with the stored files:
@@ -104,7 +128,13 @@ async def upload(
             if reason:
                 results.append(UploadResultItem(path=path, status="rejected", reason=reason))
                 continue
-            incoming[path] = _stage(upload_file, staging, n)
+            staged = _stage(upload_file, staging, n)
+            skipped = _content_problem(path, staged[0])
+            if skipped:
+                staged[0].unlink(missing_ok=True)
+                results.append(UploadResultItem(path=path, status="rejected", reason=skipped[0], detail=skipped[1]))
+                continue
+            incoming[path] = staged
             total += size
             results.append(UploadResultItem(path=path, status="accepted"))
 
@@ -149,14 +179,20 @@ async def upload(
 
 
 @router.get("/projects/{project_id}/files", response_model=list[FileOut])
-async def list_files(project_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
-    if await session.get(Project, project_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Project not found")
-    result = await session.scalars(select(File).where(File.project_id == project_id).order_by(File.file_path))
+async def list_files(
+    project_id: uuid.UUID, user: User = Depends(current_user), session: AsyncSession = Depends(get_session),
+):
+    """Only the files this user may read: a restricted file is not listed at all."""
+    await project_for(session, user, project_id)
+    allowed = await access.readable_file_ids(session, user, project_id)
+    result = await session.scalars(
+        select(File).where(File.project_id == project_id, File.id.in_(allowed)).order_by(File.file_path)
+    )
     return result.all()
 
 
 async def _file_or_404(session: AsyncSession, file_id: uuid.UUID) -> File:
+    """Admin-only callers (replace, delete, retry): any existing file."""
     row = await session.get(File, file_id)
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
@@ -164,8 +200,10 @@ async def _file_or_404(session: AsyncSession, file_id: uuid.UUID) -> File:
 
 
 @router.get("/files/{file_id}/content")
-async def file_content(file_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
-    row = await _file_or_404(session, file_id)
+async def file_content(
+    file_id: uuid.UUID, user: User = Depends(current_user), session: AsyncSession = Depends(get_session),
+):
+    row = await file_for(session, user, file_id)  # 404 for a missing file and for one the user may not read
     path = disk_path(row.project_id, row.file_path)
     if not path.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
@@ -177,7 +215,8 @@ async def file_content(file_id: uuid.UUID, session: AsyncSession = Depends(get_s
 
 @router.put("/files/{file_id}", response_model=FileReplaceResult)
 async def replace_file(
-    file_id: uuid.UUID, file: UploadFile = FormFile(...), session: AsyncSession = Depends(get_session)
+    file_id: uuid.UUID, file: UploadFile = FormFile(...), _: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
 ):
     """Replace one file's content in place (same path). Identical content is skipped."""
     row = await _file_or_404(session, file_id)
@@ -193,6 +232,9 @@ async def replace_file(
         staged, digest, size = _stage(file, staging, 0)
         if size > rules.MAX_FILE_BYTES:
             raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "File is too large")
+        problem = _content_problem(row.file_path, staged)
+        if problem:  # same checks as an upload: the file is not accepted and the stored version is untouched
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"This file was not accepted ({problem[0]}).")
         if digest == row.file_hash:
             return FileReplaceResult(id=row.id, changed=False)
         _place(staged, disk_path(row.project_id, row.file_path))
@@ -206,7 +248,9 @@ async def replace_file(
 
 
 @router.delete("/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_file(file_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def delete_file(
+    file_id: uuid.UUID, _: User = Depends(require_admin), session: AsyncSession = Depends(get_session),
+):
     row = await _file_or_404(session, file_id)
     project_id = row.project_id
     disk_path(project_id, row.file_path).unlink(missing_ok=True)
@@ -220,7 +264,9 @@ async def delete_file(file_id: uuid.UUID, session: AsyncSession = Depends(get_se
 
 
 @router.post("/files/{file_id}/retry", status_code=status.HTTP_202_ACCEPTED)
-async def retry_file(file_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def retry_file(
+    file_id: uuid.UUID, _: User = Depends(require_admin), session: AsyncSession = Depends(get_session),
+):
     """Queue a failed file for processing again."""
     row = await _file_or_404(session, file_id)
     if row.status != "failed":
@@ -236,7 +282,10 @@ async def retry_file(file_id: uuid.UUID, session: AsyncSession = Depends(get_ses
 
 
 @router.get("/projects/{project_id}/files/{file_id}/chunks", response_model=list[ChunkOut])
-async def file_chunks(project_id: uuid.UUID, file_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def file_chunks(
+    project_id: uuid.UUID, file_id: uuid.UUID, _: User = Depends(dev_admin_only),
+    session: AsyncSession = Depends(get_session),
+):
     """Chunk Inspector data. Dev-only: does not exist unless DEV_MODE=true."""
     if not settings.dev_mode:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")

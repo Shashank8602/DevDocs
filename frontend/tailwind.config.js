@@ -36,6 +36,7 @@ export default {
         surface: v("surface"),
         slate: scale("slate", [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]),
         brand: { 500: v("brand-500"), 600: v("brand-600"), link: v("brand-link") },
+        accent: { 500: v("accent-500"), 600: v("accent-600"), 700: v("accent-700") },
         danger: { DEFAULT: v("danger"), hover: v("danger-hover") },
         red: scale("red", [50, 100, 200, 500, 600, 700]),
         amber: scale("amber", [50, 500, 700]),

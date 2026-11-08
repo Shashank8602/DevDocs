@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.access import SYSTEM_ADMIN
 from app.db import SessionLocal
 from app.providers.embeddings import get_embedding_provider, set_embedding_provider
 from app.retrieval import pipeline
@@ -27,7 +28,7 @@ async def main():
             for q in data["questions"]:
                 if not emb.cached(q["q"]) or q["kind"] == "borderline":
                     continue
-                t = await pipeline.run(s, pid, q["q"], gate_threshold=-1.0)
+                t = await pipeline.run(s, pid, q["q"], viewer=SYSTEM_ADMIN, gate_threshold=-1.0)
                 terms = keyword_query(q["q"]).split()
                 top = t.bm25[0].score if t.bm25 else 0.0
                 # how many of the question's content terms appear (case-insensitively) in the best BM25 chunk

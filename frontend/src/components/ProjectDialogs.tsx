@@ -32,15 +32,15 @@ export function ProjectFormDialog({
     <Modal title={title} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">Project name</span>
+          <span className="label">Project name</span>
           <input autoFocus value={name} maxLength={100} onChange={(e) => setName(e.target.value)} className={input} />
         </label>
         <label className="block text-sm">
-            <span className="mb-1 block font-medium">Description <span className="font-normal text-slate-400">(optional)</span></span>
+            <span className="label">Description <span className="font-normal text-slate-400">(optional)</span></span>
             <textarea value={description} maxLength={500} rows={3} onChange={(e) => setDescription(e.target.value)} className={input} />
         </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onClose} className={secondary}>Cancel</button>
           <button type="submit" disabled={!valid || busy} className={primary}>{submitLabel}</button>
         </div>

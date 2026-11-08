@@ -39,6 +39,13 @@
   --emerald-50: 236 253 245;
   --emerald-500: 16 185 129;
   --emerald-700: 4 120 87;
+  /* secondary accent (teal): data and status visuals; never a second "primary" */
+  --accent-500: 20 184 166;
+  --accent-600: 13 148 136;
+  --accent-700: 15 118 110;
+  /* search-match highlight */
+  --mark: 253 230 138;
+  --mark-text: 66 32 6;
 
   --hl-comment: 100 116 139;
   --hl-keyword: 207 34 46;
@@ -79,6 +86,11 @@
   --emerald-50: 15 55 42;
   --emerald-500: 52 211 153;
   --emerald-700: 110 231 183;
+  --accent-500: 45 212 191;
+  --accent-600: 20 184 166;
+  --accent-700: 94 234 212;
+  --mark: 120 90 20;
+  --mark-text: 254 243 199;
 
   --hl-comment: 139 148 158;
   --hl-keyword: 255 123 114;
@@ -106,6 +118,19 @@ code, pre, kbd, samp { font-family: theme("fontFamily.mono"); }
     outline: 2px solid rgb(var(--brand-500));
     outline-offset: 2px;
   }
+
+  /*
+   * Cursors: an arrow over interface text (labels, numbers, headings), an I-beam only where you type or where
+   * content is meant to be read and copied (opt in with .selectable-text). Text stays selectable everywhere.
+   */
+  body { cursor: default; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="file"]),
+  textarea,
+  [contenteditable="true"] { cursor: text; }
+  a[href], button, select, summary, [role="button"], [role="tab"], [role="menuitem"],
+  input[type="checkbox"], input[type="radio"], input[type="range"],
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { cursor: pointer; }
+  :disabled, [aria-disabled="true"] { cursor: default; }
 }
 
 /* Quiet, theme-aware scrollbars */
@@ -146,6 +171,56 @@ code, pre, kbd, samp { font-family: theme("fontFamily.mono"); }
   }
   .label { @apply mb-1 block text-sm font-medium text-slate-700; }
   .hint { @apply mt-1 text-xs text-slate-500; }
+  .icon-btn {
+    @apply inline-flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg text-slate-500 transition
+      hover:bg-slate-100 hover:text-slate-900 active:scale-95 disabled:pointer-events-none disabled:opacity-40;
+  }
+  .icon-btn-sm { @apply icon-btn h-7 w-7 rounded-md; }
+  .segmented { @apply inline-flex rounded-lg border border-slate-200 bg-slate-100/70 p-1; }
+  .segmented > button { @apply rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:text-slate-900; }
+  .segmented > button[aria-selected="true"] { @apply bg-surface text-slate-900 shadow-card; }
+  .menu-item {
+    @apply flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900;
+  }
+  /* Content people read and copy: chat messages, file contents, snippets, paths. */
+  .selectable-text { cursor: text; user-select: text; }
+  .kbd { @apply rounded border border-slate-300 bg-slate-100 px-1 py-px font-mono text-[0.75rem] text-slate-600; }
+
+  /* Project / person monogram: the hue comes from the name (set --h inline). */
+  .monogram {
+    @apply inline-flex shrink-0 select-none items-center justify-center font-semibold uppercase;
+    background: hsl(var(--h) 80% 55% / 0.16);
+    color: hsl(var(--h) 65% 36%);
+  }
+  :root[data-theme="dark"] .monogram { background: hsl(var(--h) 70% 60% / 0.18); color: hsl(var(--h) 85% 75%); }
+
+  mark, .mark { background: rgb(var(--mark)); color: rgb(var(--mark-text)); @apply rounded px-0.5; }
+
+  /* Rendered markdown (answers, README excerpts, .md/.docx files): one typography for the whole app. */
+  .prose-dd { @apply break-words text-slate-800; }
+  .prose-dd > :where(* + *) { margin-top: 0.85em; }
+  .prose-dd :where(h1, h2, h3, h4) { @apply font-semibold tracking-tight text-slate-900; }
+  .prose-dd :where(h1) { @apply mt-6 text-xl; }
+  .prose-dd :where(h2) { @apply mt-6 text-lg; }
+  .prose-dd :where(h3, h4) { @apply mt-5 text-base; }
+  .prose-dd > :where(h1, h2, h3, h4):first-child { margin-top: 0; }
+  .prose-dd :where(a) { @apply text-brand-link underline decoration-brand-link/40 underline-offset-2 hover:decoration-brand-link; }
+  .prose-dd :where(strong) { @apply font-semibold text-slate-900; }
+  .prose-dd :where(ul) { @apply list-disc pl-5; }
+  .prose-dd :where(ol) { @apply list-decimal pl-5; }
+  .prose-dd :where(li) { @apply my-1 pl-1 marker:text-slate-400; }
+  .prose-dd :where(li > ul, li > ol) { @apply mt-1; }
+  .prose-dd :where(blockquote) { @apply rounded-lg bg-slate-100/80 px-4 py-2 italic text-slate-600; }
+  .prose-dd :where(hr) { @apply my-6 border-slate-200; }
+  .prose-dd :where(:not(pre) > code) {
+    @apply rounded-md border border-slate-200 bg-slate-100 px-1.5 py-px font-mono text-[0.85em] text-slate-800;
+  }
+  .prose-dd :where(pre) { @apply overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-[13px] leading-5; }
+  .prose-dd :where(pre code) { @apply border-0 bg-transparent p-0; }
+  .prose-dd :where(table) { @apply block max-w-full overflow-x-auto border-collapse text-sm; }
+  .prose-dd :where(th) { @apply border-b border-slate-200 bg-slate-100 px-3 py-2 text-left font-semibold text-slate-700; }
+  .prose-dd :where(td) { @apply border-b border-slate-200 px-3 py-2 align-top; }
+  .prose-dd :where(img) { @apply max-w-full rounded-lg; }
 }
 
 ::selection {

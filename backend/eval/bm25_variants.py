@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.access import SYSTEM_ADMIN
 from app.config import settings
 from app.db import SessionLocal
 from app.providers.embeddings import get_embedding_provider, set_embedding_provider
@@ -140,7 +141,7 @@ async def evaluate(name, spec, questions, pid, prefix, exclude):
         for q in questions:
             if hasattr(fuse, "state"):
                 fuse.state["q"] = q["q"]
-            res = await pipeline.run(s, pid, q["q"])
+            res = await pipeline.run(s, pid, q["q"], viewer=SYSTEM_ADMIN)
             files = list(dict.fromkeys(_norm(c.file_path, prefix) for c in res.final))
             if q["kind"] == "answerable":
                 exp, ok = set(q["expected"]), set(q["expected"]) | set(q["acceptable"])

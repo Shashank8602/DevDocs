@@ -24,16 +24,17 @@ export default function GlobalIngestionIndicator() {
   const done = active.reduce((n, a) => n + (a.total - a.remaining), 0);
   const total = active.reduce((n, a) => n + a.total, 0);
   const pct = total ? Math.round((done / total) * 100) : 0;
-  const label = `Processing ${done}/${total}`;
+  const waiting = active.every((a) => a.paused_until);
+  const label = waiting ? "Waiting for quota" : `Processing ${done}/${total}`;
   return (
     <div className="group relative">
       <Link
         to={`/projects/${active[0].project_id}`}
         aria-label={`${label}: ${active.map((a) => a.project_name).join(", ")}`}
-        className="flex items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 py-1.5 text-sm text-slate-700 shadow-sm"
+        className="flex h-8 items-center gap-2 rounded-full bg-brand-500/10 px-3 text-xs font-medium text-brand-link transition hover:bg-brand-500/15"
       >
-        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" aria-hidden="true" />
-        <span className="tabular-nums">{label}</span>
+        <span className={`h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent ${waiting ? "" : "animate-spin"}`} aria-hidden="true" />
+        <span className="hidden tabular-nums sm:inline">{label}</span>
       </Link>
       <div
         role="tooltip"

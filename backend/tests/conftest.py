@@ -14,13 +14,16 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.api import auth as auth_api
 from app.config import settings
 from app.db import Base, get_session, get_session_factory
 from app.ingestion import worker
 from app.main import app
+from app.models import User
 from app.providers.llm import LLMError, set_llm_provider
 from app.providers.embeddings import fingerprint_of, set_embedding_provider
 from app.search import es_client, index_manager
+from app.security import hash_password, make_token
 
 TEST_URL = make_url(settings.database_url).set(database="devdocs_test")
 
@@ -172,15 +175,55 @@ async def ingest(sessions):
     return run
 
 
+@pytest.fixture(autouse=True)
+def _fresh_login_throttle():
+    auth_api.reset_throttle()
+
+
+async def make_user(sessions, email: str, role: str = "member", password: str = "password-123") -> User:
+    """A throwaway person created inside a test; nothing about users is seeded anywhere in the app."""
+    async with sessions() as session:
+        user = User(email=email, name=email.split("@")[0], password_hash=hash_password(password), role=role)
+        session.add(user)
+        await session.commit()
+        return user
+
+
+async def add_member(client, project_id, user) -> None:
+    """Put an existing person into one project (the admin client does this through the API)."""
+    res = await client.post(f"/projects/{project_id}/members", json={"email": user.email})
+    assert res.status_code == 201, res.text
+
+
 @pytest_asyncio.fixture
-async def client(sessions):
+async def admin(sessions):
+    return await make_user(sessions, "admin@example.test", "admin")
+
+
+@pytest_asyncio.fixture
+async def http(sessions):
+    """Build an HTTP client for any user (or none): `http(user)`. Each client carries its own credentials."""
     async def override_session():
         async with sessions() as session:
             yield session
 
     app.dependency_overrides[get_session] = override_session
     app.dependency_overrides[get_session_factory] = lambda: sessions
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
-        yield c
+    opened: list[httpx.AsyncClient] = []
+
+    def build(user: User | None = None) -> httpx.AsyncClient:
+        headers = {"Authorization": f"Bearer {make_token(user.id)}"} if user else {}
+        c = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test", headers=headers)
+        opened.append(c)
+        return c
+
+    yield build
+    for c in opened:
+        await c.aclose()
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def client(http, admin):
+    """The default client acts as an admin, so the feature tests keep their original shape."""
+    return http(admin)

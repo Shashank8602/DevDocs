@@ -4,31 +4,51 @@
 
 DevDocs is a project-scoped retrieval-augmented assistant for software projects. Upload a project folder, and DevDocs indexes it incrementally and lets you ask questions about the code and documentation. Every answer is grounded in your files and links back to the exact lines it came from. Questions the project cannot answer are declined instead of guessed.
 
-It runs locally, for a single user.
+It runs locally. An admin invites people and chooses who can read which folders and files; everyone else only ever sees, searches and gets answers from what they are allowed to read.
+
+![Chat answer with a table and the conversation list](Docs/Design/dev6.png)
 
 ## Highlights
 
+- **Permission-aware retrieval.** Each person's questions are answered only from files they may read. Hidden files are never searched, counted, listed or sent to the model, and a restricted question gets the same polite refusal as an off-topic one.
 - **Grounded answers with citations.** Sources are built by the application, not the model, so they cannot be invented. Click one to open the file with the cited lines highlighted.
 - **Hybrid retrieval.** Keyword search (BM25 over content, path and headings) and vector search are fused with Reciprocal Rank Fusion, then gated on relevance.
 - **Honest refusals.** A relevance gate declines off-topic questions without calling the LLM, which saves tokens and prevents fabricated answers.
 - **Incremental ingestion.** SHA-256 change detection re-processes only what changed, and unchanged chunks keep their embeddings.
 - **Rate-limit aware.** Client-side rate limiting, real token accounting, and automatic routing to a secondary model when the primary's per-minute budget is spent.
 - **Resilient chat.** Streaming responses, Stop / Retry / Cancel, silent retries, conversation memory with background summarisation.
-- **Configurable at runtime.** Models, providers, keys and retrieval tuning can be changed from the Settings page without a restart.
+- **Configurable at runtime.** Models, providers, keys and retrieval tuning can be changed from the Settings page (account menu → Settings, admins only) without a restart.
+- **A calm, consistent interface.** Light and dark themes from one set of colour tokens, file-type icons, readable Markdown and code everywhere, and a project sidebar that folds to icons.
+
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Projects home](Docs/Design/dev1.png) | ![Project dashboard](Docs/Design/dev2.png) |
+| **Projects home.** One card per project with its status, file count and last update; edit and delete sit in the "⋯" menu. | **Dashboard.** Counts, languages, detected stack, entry points and largest files, computed from your files with no AI quota. |
+| ![Import map](Docs/Design/dev3.png) | ![Files explorer](Docs/Design/dev4.png) |
+| **Map.** Folder-level import graph; double-click a folder to see its files and what might break if one changes. | **Files.** Collapsible tree with file-type icons, search, upload and re-upload; a green dot means the file is ready. |
+| ![Select lines and ask](Docs/Design/dev5.png) | ![Settings](Docs/Design/dev7.png) |
+| **Select and ask.** Select lines in the file viewer and ask about them without leaving the file. | **Settings.** Models, keys, embeddings, reranker and retrieval tuning, with a section index. |
+| ![Dashboard in dark mode](Docs/Design/dev8.png) | |
+| **Dark mode.** Every screen follows the same tokens in both themes. | |
 
 ## Features
 
-| Area            | What you get                                                                                                                                                     |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Projects        | Create, rename, delete; per-project isolation of files, vectors and conversations                                                                                |
-| Upload          | Folder upload with client- and server-side filtering (ignore list, supported types, size limits), re-upload with created / modified / deleted / unchanged report |
-| Explorer        | Collapsible tree, name and path search, status badges, retry / replace / delete, floating viewer for code, Markdown, PDF, DOCX, CSV and text                     |
-| Ingestion       | Background worker, parsers and structure-aware chunkers (Python by AST, Markdown by heading, PDF by page, and more), live progress                               |
-| Chat            | Streaming Markdown answers, syntax-highlighted code blocks, conversation sidebar, follow-up questions, Stop / Retry / Cancel                                     |
-| Citations       | Grouped by file in retrieval order, line ranges kept separate, deleted files handled gracefully                                                                  |
-| Settings        | LLM, embeddings, reranker and retrieval tuning; API keys encrypted at rest; Test Connection; one-click re-index when embeddings change                           |
-| Developer tools | Chunk Inspector, ES Inspector with vector peek, Retrieval Playground, chat Context Inspector, failure injection (toggle in Settings)                             |
-| Status          | Live indicator for backend, database and search availability; ingestion progress in the header and project rail                                                  |
+| Area            | What you get                                                                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Projects        | Create, rename, delete (from each card's "⋯" menu); per-project isolation of files, vectors and conversations; coloured initials tell projects apart                           |
+| People & access | Email + password sign-in, admin / member roles, read access on folders and files, "Preview as" a person, audit log of who asked what                                           |
+| Insights        | Dashboard (stack, entry points, env vars, largest files), keyword search, symbol index, import map, project-aware starter questions: all free of AI quota                      |
+| Upload          | Folder upload with client- and server-side filtering (ignore list, supported types, size limits), re-upload with created / modified / deleted / unchanged report               |
+| Explorer        | Collapsible tree with file-type icons, name and path search, drag-and-drop upload, status badges, retry / replace / delete, viewer for code, Markdown, PDF, DOCX, CSV and text |
+| Ingestion       | Background worker, parsers and structure-aware chunkers (Python by AST, Markdown by heading, PDF by page, and more), live progress                                             |
+| Chat            | Streaming Markdown answers, syntax-highlighted code blocks, conversation sidebar, follow-up questions, Stop / Retry / Cancel, select lines in a file and ask                   |
+| Citations       | Numbered source cards (file, folder, lines) in retrieval order, line ranges kept separate, deleted or hidden files handled gracefully                                          |
+| Settings        | Admin only, opened from the account menu; LLM, embeddings, reranker and retrieval tuning with a section index; API keys encrypted at rest; Test Connection; one-click re-index |
+| Interface       | Light and dark themes, breadcrumbs, account menu (Settings, Sign out), project sidebar that folds to icons, one Markdown style for answers and documents                       |
+| Developer tools | Chunk Inspector, ES Inspector with vector peek, Retrieval Playground, chat Context Inspector, failure injection (toggle in Settings)                                           |
+| Status          | Live indicator for backend, database and search availability; ingestion progress in the header and project rail                                                                |
 
 ## How it works
 
@@ -37,14 +57,15 @@ flowchart LR
     U["Upload folder"] --> I["Parse + chunk"]
     I --> PG[("Postgres<br/>source of truth")]
     I --> E["Embed"] --> ES[("Elasticsearch<br/>BM25 + vectors")]
-    Q["Question"] --> R["BM25 + kNN"] --> F["RRF fusion"] --> G{"Relevance gate"}
+    Q["Question"] --> V["Only files the asker<br/>may read (Postgres)"] --> R["BM25 + kNN"] --> F["RRF fusion"] --> G{"Relevance gate"}
+    PG --> V
     ES --> R
     G -- "below threshold" --> N["Declined, no LLM call"]
     G -- "passes" --> P["Filter + context budget"] --> L["LLM (streamed)"] --> A["Answer + citations"]
 ```
 
 1. A file becomes searchable only after its chunks are stored in Postgres and indexed in Elasticsearch.
-2. Every query is filtered by project and by files that are ready, enforced on the server.
+2. Every query is filtered on the server by project, by files that are ready, and by files the asker may read. The readable set comes from Postgres access rules, never from the browser, and is applied inside the Elasticsearch query.
 3. Chunks that survive the gate and filter are sent to the model with the question; sources are attached by the application.
 
 ## Retrieval and answer quality
@@ -75,7 +96,7 @@ Design decisions backed by measurement:
 
 Measured end to end on a laptop against the live providers (single runs; provider latency varies by about a second).
 
-|                                             |                                                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Retrieval (query embedding, search, fusion) | 0.5–0.8 s, and tens of milliseconds for a repeated question                                             |
 | First token                                 | about 1 s on the smaller model, 1.5–3.5 s on the larger one                                             |
@@ -91,7 +112,7 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 
 | Layer          | Technology                                                                                                                                   |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Frontend       | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query                                                                                     |
+| Frontend       | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query; react-markdown, highlight.js, pdf.js, mammoth and papaparse to render content      |
 | Backend        | FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic                                                                                             |
 | Storage        | PostgreSQL 16 (source of truth), Elasticsearch 8 (BM25 and dense vectors)                                                                    |
 | LLM            | Groq (`openai/gpt-oss-120b` by default, `openai/gpt-oss-20b` as fallback; OpenAI-compatible API); Gemini switchable. Runs on free-tier plans |
@@ -114,7 +135,7 @@ cd DevDocs
 cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 ```
 
-Open `.env` and fill in the API key variables (names are listed in `.env.example`). Keys can also be set later in the app's Settings page.
+Open `.env` and fill in the API key variables (names are listed in `.env.example`). Keys can also be set later in the app's Settings page (account menu → Settings).
 
 ### 2. Start the databases
 
@@ -153,10 +174,16 @@ Open **http://localhost:5173**.
 
 ### 5. Try it
 
-1. Create a project.
-2. Open **Files** and upload a folder (a sample is in `samples/ecommerce-demo/`).
-3. Wait for the files to show **Ready**.
-4. Open **Chat** and ask, for example, "How does authentication work?"
+1. On the first visit, create the admin account (email and password). Set `LOCAL_MODE=true` in `.env` to skip sign-in when only you use the app on your own machine.
+2. Create a project.
+3. Open **Files** and upload a folder (a sample is in `samples/ecommerce-demo/`).
+4. Wait until each file shows a green dot (**Ready**).
+5. Open **Chat** and ask, for example, "How does authentication work?"
+6. To share: open the project's **Access** tab, add people in its **People** view, then use **By folder** to choose who can read each folder or file. A file nobody has a rule for is visible to admins only. In **By person**, use "Preview app as this person" to check before you share.
+
+### Privacy
+
+Uploaded text leaves your machine: it is sent to Google (Gemini) to create embeddings, and the passages relevant to a question are sent to the chat provider (Groq or Gemini). Files that look like they contain credentials (private keys, cloud and API tokens, `credentials.json`, `.env` files) are skipped at upload and listed in the upload report. Generated and minified files are skipped too.
 
 ### Verify your keys
 
@@ -204,6 +231,7 @@ cd backend
 | [Implementation plan](Docs/Plan/DevDocs-V1-Implementation-Plan.md)                                 | architecture, data model, behaviour per feature                                 |
 | [Retrieval design](Docs/Plan/Retrieval.md)                                                         | pipeline, tuning, settings                                                      |
 | [Backend file flow](Docs/Backend-File-Flow.md)                                                     | module order, dependencies, runtime flows                                       |
+| [Frontend design](Docs/Plan/Frontend-Design.md)                                                    | colour tokens, shared components, layout and cursor rules                       |
 | [Implementation challenges](Docs/Impl_Clarifications/Phases-7-12-Implementation-and-Challenges.md) | problems met while building chat, memory and settings, and how they were solved |
 | [Diagrams](Docs/Plan/Diagrams/README.md)                                                           | Mermaid diagrams                                                                |
 
@@ -217,6 +245,7 @@ cd backend
 
 ## Known limitations
 
-- Single user, local only; there is no authentication.
+- Sign-in is a simple email and password (no SSO). The guarantee is that the model is only *given* text the asker may read; anything a person already saw cannot be unsaid. All users share one set of free-tier AI quotas.
+- The import map and symbol index read Python, JavaScript, TypeScript, Java and C includes (static imports only); other languages are still chunked by a generic splitter.
 - The Jev reranker adapter is a placeholder until its API details are available.
 - The relevance gate value is tied to the embedding model and was calibrated on one project; re-run the evaluation after changing embeddings.

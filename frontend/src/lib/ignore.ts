@@ -17,6 +17,8 @@ export const REASON_LABEL: Record<string, string> = {
   too_large: "over the per-file size limit",
   total_limit_exceeded: "over the total size limit",
   invalid_path: "invalid path",
+  generated_file: "generated or minified file",
+  possible_secret: "looks like it contains a credential",
 };
 
 export function fromInput(files: File[]): Selected[] {
@@ -25,6 +27,7 @@ export function fromInput(files: File[]): Selected[] {
 
 export function filterSelection(items: Selected[], rules: UploadRules): FilterResult {
   const ignored = new Set(rules.ignored_names);
+  const suffixes = rules.ignored_suffixes ?? [];
   const accepted: Selected[] = [];
   const skipped: FilterResult["skipped"] = [];
   let total = 0;
@@ -34,6 +37,7 @@ export function filterSelection(items: Selected[], rules: UploadRules): FilterRe
     const ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : "";
     let reason: string | null = null;
     if (path.split("/").some((part) => ignored.has(part))) reason = "ignored";
+    else if (suffixes.some((s) => file.name.toLowerCase().endsWith(s))) reason = "generated_file";
     else if (!(ext in rules.extensions)) reason = "unsupported_type";
     else if (file.size > rules.max_file_bytes) reason = "too_large";
     else if (total + file.size > rules.max_total_bytes) reason = "total_limit_exceeded";

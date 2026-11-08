@@ -33,6 +33,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.access import SYSTEM_ADMIN
 from app.config import settings
 from app.db import SessionLocal
 from app.models import File
@@ -163,7 +164,7 @@ async def rows_live(args, questions: list[dict], prefix: str, exclude: set[str])
         for i, q in enumerate(questions, 1):
             try:
                 trace = await pipeline.run(
-                    session, pid, q["q"], gate_threshold=-math.inf, relative_cutoff=0, rerank_top_n=10 ** 6,
+                    session, pid, q["q"], viewer=SYSTEM_ADMIN, gate_threshold=-math.inf, relative_cutoff=0, rerank_top_n=10 ** 6,
                 )
             except (pipeline.RetrievalError, EmbeddingError) as exc:
                 print(f"STOPPED at question {i}: {exc}")

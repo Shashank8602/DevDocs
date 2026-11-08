@@ -12,9 +12,14 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://devdocs:devdocs@localhost:5432/devdocs"
     elasticsearch_url: str = "http://localhost:9200"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     dev_mode: bool = False
     data_dir: Path = REPO_ROOT / "data"
+    # LOCAL_MODE=true skips the sign-in screen: a request with no credentials acts as the first admin. For a
+    # single person running DevDocs on their own machine; never enable it on a shared deployment.
+    local_mode: bool = False
+    # Set true when the site is served over HTTPS so the session cookie is marked Secure.
+    cookie_secure: bool = False
 
     # Embeddings (Gemini). Keys and model come from .env for now; a Settings UI replaces this later.
     gemini_api_key: str = ""
@@ -52,16 +57,21 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 60.0
     llm_reasoning_effort: str = "low"  # low | medium | high; reasoning tokens are paid for but never shown
     # Conversation context sent with each question: the most recent messages, capped by count and tokens.
-    chat_history_messages: int = 6
-    chat_history_tokens: int = 800
+    # Older answers are sent as a short digest (first sentences + cited files), not in full; the newest answer stays
+    # whole. That makes each message cheap, so more of them fit in the window.
+    history_digest_answers: bool = True
+    history_answer_chars: int = 240
+    chat_history_messages: int = 10
+    chat_history_tokens: int = 1000
     chat_max_message_chars: int = 8000
     llm_temperature: float = 0.2  # low: answers are grounded explanations, not creative writing
     # Resilience (Phase 10): app-level retries before the first token (on top of the SDK's own), and how long
     # the stream may stay silent before the call is treated as hung.
     generation_retries: int = 1
     llm_inactivity_seconds: float = 45.0
-    # Conversation memory (Phase 9): once the messages after the checkpoint exceed this many tokens, older
-    # ones are folded into the summary in the background; the newest `summary_keep_messages` stay verbatim.
+    # Conversation memory (Phase 9): older messages are folded into the summary in the background, but only when
+    # needed: the window is nearly full (by messages or by `chat_history_tokens`), or the history as sent passes this
+    # many tokens. The newest `summary_keep_messages` stay verbatim.
     summary_threshold_tokens: int = 1200
     summary_keep_messages: int = 2
     summary_max_tokens: int = 400

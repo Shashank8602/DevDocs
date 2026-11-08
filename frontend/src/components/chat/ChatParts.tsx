@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatMessage, ContextInspection, SourceRef } from "../../api/chat";
 import Modal from "../Modal";
-import { Badge, CopyButton, Icon, Spinner } from "../ui";
+import { Badge, CopyButton, FileIcon, Icon, Spinner } from "../ui";
 import AssistantMarkdown from "./AssistantMarkdown";
 
 // Purely cosmetic: they say nothing about what the backend is doing.
@@ -38,40 +38,55 @@ export function ThinkingIndicator({ waitSeconds }: { waitSeconds: number | null 
 }
 
 export function AssistantAvatar() {
-  return (
-    <span
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white shadow-sm"
-      style={{ backgroundImage: "linear-gradient(135deg, rgb(var(--brand-500)), rgb(var(--brand-600)))" }}
-      aria-hidden="true"
-    >
-      <Icon name="sparkles" className="h-4 w-4" />
-    </span>
-  );
+  return <img src="/logo.svg" alt="" aria-hidden="true" className="mt-0.5 h-7 w-7 shrink-0 rounded-lg shadow-sm" />;
 }
+
+const fileName = (p: string) => p.split("/").pop() ?? p;
+const folderOf = (p: string) => p.split("/").slice(0, -1).join("/");
 
 export function SourceChips({ sources, onOpen }: { sources: SourceRef[]; onOpen: (s: SourceRef) => void }) {
   if (!sources.length) return null;
   return (
-    <div className="mt-3">
-      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Sources</p>
-      <ul className="flex flex-wrap gap-2">
-        {sources.map((s) => (
+    <div className="mt-4">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+        <Icon name="book" className="h-3.5 w-3.5" /> Sources <span className="tabular-nums text-slate-400">{sources.length}</span>
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {sources.map((s, i) => s.available === false || !s.file_id ? (
+          <li key={`gone-${i}`}>
+            <span
+              className="flex h-full items-center gap-2.5 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500"
+              title="You no longer have access to this file"
+            >
+              <Icon name="lock" className="h-4 w-4 shrink-0" />
+              Source no longer available
+            </span>
+          </li>
+        ) : (
           <li key={s.file_id}>
             <button
               onClick={() => onOpen(s)}
               title={s.label}
-              className="group flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-surface px-2.5 py-1.5 text-left text-xs shadow-sm transition hover:-translate-y-px hover:border-brand-500/50 hover:shadow-card"
+              className="group flex h-full w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-surface px-3 py-2 text-left shadow-sm transition hover:-translate-y-px hover:border-brand-500/50 hover:shadow-card"
             >
-              <Icon name="file" className="h-3.5 w-3.5 shrink-0 text-brand-link" />
-              <span className="min-w-0">
-                <span className="block truncate font-mono text-[12px] text-slate-800">{s.file_path}</span>
-                {s.ranges.length > 0 && (
-                  <span className="block text-[11px] text-slate-500">
-                    {s.ranges.length === 1 && s.ranges[0][0] === s.ranges[0][1] ? "Line" : "Lines"}{" "}
-                    {s.ranges.map(([a, b]) => (a === b ? a : `${a}–${b}`)).join(", ")}
-                  </span>
-                )}
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-semibold tabular-nums text-slate-600 group-hover:bg-brand-500/10 group-hover:text-brand-link">
+                {i + 1}
               </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+                  <FileIcon name={s.file_path} className="h-3.5 w-3.5" />
+                  <span className="truncate font-mono text-xs font-medium text-slate-800">{fileName(s.file_path)}</span>
+                </span>
+                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                  {folderOf(s.file_path) && <span className="min-w-0 truncate">{folderOf(s.file_path)}</span>}
+                  {s.ranges.length > 0 && (
+                    <span className="shrink-0 rounded bg-amber-500/15 px-1.5 font-medium tabular-nums text-amber-700">
+                      L{s.ranges.map(([a, b]) => (a === b ? a : `${a}–${b}`)).join(", ")}
+                    </span>
+                  )}
+                </span>
+              </span>
+              <Icon name="arrow-right" className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-brand-link" />
             </button>
           </li>
         ))}
@@ -83,13 +98,13 @@ export function SourceChips({ sources, onOpen }: { sources: SourceRef[]; onOpen:
 export function MessageView({ m, onOpenSource }: { m: ChatMessage; onOpenSource: (s: SourceRef) => void }) {
   if (m.role === "user") {
     return (
-      <div className="flex animate-slide-up justify-end">
-        <p
-          className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] leading-6 text-white shadow-sm"
-          style={{ backgroundImage: "linear-gradient(135deg, rgb(var(--brand-500)), rgb(var(--brand-600)))" }}
-        >
+      <div className="group flex animate-slide-up flex-col items-end">
+        <p className="selectable-text max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-brand-600 px-4 py-2.5 text-[15px] leading-6 text-white shadow-sm selection:bg-white/35 selection:text-white">
           {m.content}
         </p>
+        <div className="mt-1 opacity-60 transition group-hover:opacity-100 focus-within:opacity-100">
+          <CopyButton text={m.content} className="text-slate-500" />
+        </div>
       </div>
     );
   }
@@ -99,7 +114,7 @@ export function MessageView({ m, onOpenSource }: { m: ChatMessage; onOpenSource:
       <div className="min-w-0 flex-1">
         <AssistantMarkdown text={m.content} />
         {m.sources_json && <SourceChips sources={m.sources_json} onOpen={onOpenSource} />}
-        <div className="mt-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+        <div className="mt-1 opacity-60 transition group-hover:opacity-100 focus-within:opacity-100">
           <CopyButton text={m.content} className="text-slate-500" />
         </div>
       </div>
@@ -127,38 +142,37 @@ export function StoppedBar({
   );
 }
 
-const SUGGESTIONS = [
-  "How is this project structured?",
-  "Where is the entry point and what does it do?",
-  "How does authentication work?",
-  "What configuration does this project need to run?",
-];
-
-export function BlankState({ onPick }: { onPick: (q: string) => void }) {
+/** `starters` come from the project's own files (see GET /projects/{id}/starters); there are no fixed examples. */
+export function BlankState({ onPick, starters }: { onPick: (q: string) => void; starters: string[] }) {
   return (
-    <div className="mx-auto flex max-w-xl animate-fade-in flex-col items-center px-4 py-12 text-center">
-      <span
-        className="flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-lift"
-        style={{ backgroundImage: "linear-gradient(135deg, rgb(var(--brand-500)), rgb(var(--brand-600)))" }}
-      >
-        <Icon name="sparkles" className="h-7 w-7" />
+    <div className="mx-auto flex max-w-2xl animate-fade-in flex-col items-center px-4 py-14 text-center">
+      <span className="relative isolate">
+        <span aria-hidden="true" className="absolute inset-0 -z-10 scale-150 rounded-full bg-brand-500/20 blur-2xl" />
+        <img src="/logo.svg" alt="" className="h-16 w-16 rounded-2xl shadow-lift ring-4 ring-brand-500/10" />
       </span>
-      <h2 className="mt-5 text-xl font-semibold text-slate-900">Ask anything about your project</h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <h2 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">Ask anything about your project</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
         Answers are grounded in your files and cite the exact lines they came from.
       </p>
-      <ul className="mt-6 grid w-full gap-2 sm:grid-cols-2">
-        {SUGGESTIONS.map((q) => (
-          <li key={q}>
-            <button
-              onClick={() => onPick(q)}
-              className="card w-full px-3.5 py-3 text-left text-sm text-slate-700 transition hover:-translate-y-0.5 hover:border-brand-500/50 hover:shadow-lift"
-            >
-              {q}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {starters.length > 0 && (
+        <>
+          <p className="mt-8 self-start text-xs font-medium text-slate-500">Try one of these</p>
+          <ul className="mt-2 grid w-full gap-2.5 sm:grid-cols-2">
+            {starters.map((q) => (
+              <li key={q}>
+                <button
+                  onClick={() => onPick(q)}
+                  className="card group flex h-full w-full items-start gap-3 px-4 py-3 text-left text-sm text-slate-700 transition hover:-translate-y-0.5 hover:border-brand-500/50 hover:shadow-lift"
+                >
+                  <Icon name="chat" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 group-hover:text-brand-link" />
+                  <span className="flex-1">{q}</span>
+                  <Icon name="arrow-right" className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 opacity-0 transition group-hover:translate-x-0.5 group-hover:text-brand-link group-hover:opacity-100" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
@@ -192,8 +206,8 @@ export function Composer({
   };
 
   return (
-    <div className="border-t border-slate-200 bg-surface/80 p-3 backdrop-blur">
-      <div className="card mx-auto flex max-w-3xl items-end gap-2 p-2 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20">
+    <div className="px-4 pb-3 pt-2">
+      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-slate-300 bg-surface p-2 shadow-lift transition focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/15">
         <textarea
           ref={ref}
           value={draft}
@@ -207,7 +221,7 @@ export function Composer({
           rows={1}
           maxLength={maxChars}
           disabled={busy}
-          placeholder={busy ? "Generating…" : "Ask something about your project…  (Enter to send, Shift+Enter for a new line)"}
+          placeholder={busy ? "Generating…" : "Ask something about your project…"}
           aria-label="Message"
           className="max-h-48 min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-6 outline-none placeholder:text-slate-400 disabled:opacity-60"
         />
@@ -216,16 +230,19 @@ export function Composer({
             <Icon name="stop" className="h-3.5 w-3.5" /> Stop
           </button>
         ) : (
-          <button onClick={send} disabled={!text} aria-label="Send" className="btn-primary h-10 w-10 shrink-0 px-0">
+          <button onClick={send} disabled={!text} aria-label="Send" className="btn-primary h-10 w-10 shrink-0 rounded-xl px-0">
             <Icon name="send" className="h-4 w-4" />
           </button>
         )}
       </div>
-      {draft.length > maxChars * 0.8 && (
-        <p className={`mx-auto mt-1 max-w-3xl text-right text-xs ${draft.length >= maxChars ? "text-red-600" : "text-slate-500"}`}>
-          {draft.length.toLocaleString()} / {maxChars.toLocaleString()}
-        </p>
-      )}
+      <div className="mx-auto mt-1.5 flex max-w-3xl items-center justify-between gap-3 px-1 text-xs text-slate-500">
+        <span className="hidden sm:inline"><kbd className="kbd">Enter</kbd> to send · <kbd className="kbd">Shift</kbd>+<kbd className="kbd">Enter</kbd> for a new line</span>
+        {draft.length > maxChars * 0.8 && (
+          <span className={`ml-auto tabular-nums ${draft.length >= maxChars ? "text-red-600" : ""}`}>
+            {draft.length.toLocaleString()} / {maxChars.toLocaleString()}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -250,7 +267,7 @@ export function ContextInspectorDialog({
           </div>
           <div>
             <h3 className="font-semibold text-slate-800">Retrieval query</h3>
-            <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-100 p-3 font-mono text-xs">{turn.retrieval_query}</pre>
+            <pre className="selectable-text mt-1 whitespace-pre-wrap rounded-lg bg-slate-100 p-3 font-mono text-xs">{turn.retrieval_query}</pre>
           </div>
           <div>
             <h3 className="font-semibold text-slate-800">Chunks sent ({turn.chunks.length})</h3>
@@ -268,7 +285,7 @@ export function ContextInspectorDialog({
           {data.summary && (
             <div>
               <h3 className="font-semibold text-slate-800">Conversation summary</h3>
-              <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-100 p-3">{data.summary}</p>
+              <p className="selectable-text mt-1 whitespace-pre-wrap rounded-lg bg-slate-100 p-3">{data.summary}</p>
             </div>
           )}
           <div>
@@ -279,7 +296,7 @@ export function ContextInspectorDialog({
                   <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
                     {m.role} · ~{Math.ceil(m.content.length / 4)} tokens
                   </summary>
-                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap border-t border-slate-200 p-3 font-mono text-xs">{m.content}</pre>
+                  <pre className="selectable-text max-h-72 overflow-auto whitespace-pre-wrap border-t border-slate-200 p-3 font-mono text-xs">{m.content}</pre>
                 </details>
               ))}
             </div>

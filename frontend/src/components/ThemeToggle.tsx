@@ -5,14 +5,8 @@ export default function ThemeToggle() {
   const dark = theme === "dark";
   const label = dark ? "Switch to light mode" : "Switch to dark mode";
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={label}
-      title={label}
-      className="rounded-md border border-slate-300 bg-surface p-1.5 text-slate-700 shadow-sm transition hover:bg-slate-100 active:scale-95"
-    >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <button type="button" onClick={toggle} aria-label={label} title={label} className="icon-btn">
+      <svg key={theme} viewBox="0 0 24 24" className="h-[18px] w-[18px] animate-scale-in" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {dark ? (
           <>
             <circle cx="12" cy="12" r="4" />

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import settings_store
+from app.auth_deps import require_admin
 from app.config import settings
 from app.db import get_session
 from app.ingestion.status import refresh_project_status
@@ -17,7 +18,7 @@ from app.providers.embeddings import GeminiEmbeddingProvider, fingerprint_of, ge
 from app.providers.llm import PROVIDERS, OpenAICompatLLMProvider
 from app.retrieval.reranker import JevReranker
 
-router = APIRouter(prefix="/settings", tags=["settings"])
+router = APIRouter(prefix="/settings", tags=["settings"], dependencies=[Depends(require_admin)])
 log = logging.getLogger("devdocs.settings")
 
 CONNECT_FAILED = "Couldn't connect. Check the API key and settings, then try again."

@@ -199,16 +199,16 @@ async def test_failed_question_is_not_sent_as_history_later(client, ingest, llm)
     assert [m["role"] for m in llm.calls[-1]] == ["system", "user"]  # the unanswered question is left out
 
 
-async def test_client_disconnect_marks_the_question_stopped_and_saves_no_answer(client, ingest, sessions, llm):
+async def test_client_disconnect_marks_the_question_stopped_and_saves_no_answer(client, ingest, sessions, llm, admin):
     pid = await _ready_project(client, ingest)
     async with sessions() as s:
-        conv = Conversation(project_id=uuid.UUID(pid), title="t")
+        conv = Conversation(project_id=uuid.UUID(pid), user_id=admin.id, title="t")
         s.add(conv)
         await s.flush()
         user = Message(conversation_id=conv.id, role="user", content="validate_token decode token", gen_state="pending")
         s.add(user)
         await s.commit()
-    gen = chat.stream_answer(sessions, uuid.UUID(pid), conv.id, user.id, "validate_token decode token")
+    gen = chat.stream_answer(sessions, uuid.UUID(pid), conv.id, user.id, "validate_token decode token", admin.id)
     assert (await gen.__anext__()).name == "token"
     await gen.aclose()  # what the server does when the client goes away
     assert [(m.role, m.gen_state) for m in await _messages(sessions)] == [("user", "stopped")]
@@ -315,6 +315,42 @@ async def test_second_long_question_waits_for_the_token_window_instead_of_failin
 ])
 def test_title_is_derived_from_the_first_question_without_an_llm(question, title):
     assert title_from_question(question) == title
+
+
+def _m(role, content, sources=None):
+    from app.models import Message
+    return Message(id=uuid.uuid4(), conversation_id=uuid.uuid4(), role=role, content=content, sources_json=sources)
+
+
+def test_older_answers_are_sent_as_digests_and_the_newest_stays_whole():
+    from app.generation import memory
+    long = "JWT tokens are checked in validate_token. " + "More detail here. " * 100 + "```python\nprint('x')\n```"
+    src = [{"file_path": "auth/jwt.py"}, {"file_path": "auth/jwt.py"}, {"file_path": "app.py"}]
+    msgs = [_m("user", "q1"), _m("assistant", long, src), _m("user", "q2"), _m("assistant", "newest answer", src)]
+    sent = memory.history_pairs(msgs)
+    assert sent[0] == ("user", "q1") and sent[2] == ("user", "q2")  # questions are never shortened
+    assert sent[3] == ("assistant", "newest answer")  # the latest answer is whole
+    old = sent[1][1]
+    assert old.startswith("(earlier answer, shortened) JWT tokens are checked in validate_token.")
+    assert "print(" not in old and old.endswith("[cited: auth/jwt.py, app.py]")  # code dropped, files deduplicated
+    assert len(old) < len(long) / 3
+    assert msgs[1].content == long  # the stored message is untouched
+
+
+def test_digests_can_be_turned_off(monkeypatch):
+    from app.generation import memory
+    monkeypatch.setattr(settings, "history_digest_answers", False)
+    msgs = [_m("assistant", "a" * 900), _m("assistant", "b")]
+    assert memory.history_pairs(msgs)[0][1] == "a" * 900
+
+
+def test_summary_is_only_needed_when_the_window_is_nearly_full(monkeypatch):
+    from app.generation import memory
+    monkeypatch.setattr(settings, "chat_history_messages", 10)
+    monkeypatch.setattr(settings, "chat_history_tokens", 1000)
+    assert not memory.window_nearly_full([("user", "hi"), ("assistant", "hello")] * 3)  # 6 short messages
+    assert memory.window_nearly_full([("user", "hi"), ("assistant", "hello")] * 5)  # the 10-message window is full
+    assert memory.window_nearly_full([("assistant", "x" * 3300)])  # about 825 tokens: past 80% of the cap
 
 
 def _c(path, content, start=1, end=2):

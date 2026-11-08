@@ -17,7 +17,7 @@ Example: `app/db.py` is **02** because it imports `app/config.py` (**01**). `app
 Rules for numbering:
 
 1. **Numbers are never reused or renumbered.** If a file is removed, its number stays empty.
-2. **New files take the next free number** at the bottom of the list (currently the next number is **49**), in the feature section they belong to.
+2. **New files take the next free number** at the bottom of the list (currently the next number is **57**), in the feature section they belong to.
 3. **Before adding a file, list its imports.** Every import must already have a lower number. If it doesn't, the design is wrong. Fix the design, not the order.
 4. **Migrations are ordered by revision**, not by this list. Each new migration's `down_revision` is the previous revision (`0001` → `0002` → … ).
 5. **Tests are not numbered.** They come after everything they test.
@@ -76,8 +76,16 @@ Rules for numbering:
 | 46 | `app/settings_store.py` | Settings (11) | 01, 03 | 23 ⚠, 47, tests |
 | 47 | `app/api/settings.py` | Settings (11) | 01, 02, 03, 18, 24, 33, 36, 46 | 23 |
 | 48 | `app/ingestion/reindex.py` | Re-indexing (11) | 02, 03, 05, 18, 24, 25, 26 | 21 ⚠, 47 |
+| 49 | `app/security.py` | Identity (A) | 01 | 51, 52, tests |
+| 50 | `app/access.py` | Access rules (B) | 03 | 35 ⚠, 45 ⚠, 51, 53, 56, `eval/*.py`, tests |
+| 51 | `app/auth_deps.py` | Identity (A), access (B) | 01, 02, 03, 49, 50 | 20 ⚠, 21 ⚠, 22 ⚠, 30 ⚠, 40 ⚠, 47 ⚠, 52, 53, 56 |
+| 52 | `app/api/auth.py` | Identity (A) | 01, 02, 03, 49, 51 | 23 ⚠ |
+| 53 | `app/api/access.py` | Access rules (B), audit log (D) | 02, 03, 06, 50, 51 | 23 ⚠ |
+| 54 | `app/ingestion/safety.py` | Trust fixes (secret scan, generated files) | none | 20 ⚠ |
+| 55 | `app/analysis.py` | Insights (E) | none | 56 |
+| 56 | `app/api/insights.py` | Insights (E): dashboard, search, symbols, starters, import graph | 02, 03, 20, 27, 35, 50, 51, 55 | 23 ⚠ |
 
-⚠ **Ordering exception (Phases 5, 6 and 7).** Phase 5 makes already-numbered files (19, 20, 21, 23, and 24 via the rate limiter 31) import files that did not exist yet, so those imports point at *higher* numbers. Phase 6 does the same for `api/dev.py` (30), which gains the Playground v2 endpoint and imports the pipeline (35) and selection (34). Phase 7 does it once more: `main.py` (23) includes the chat router (40). Phases 8–11 and the retrieval optimisation add more of the same kind: `bm25.py` (27) imports the query helpers (41); `chat.py` (39) imports citations (43), the inspector (44) and memory (45); `conversations.py` (40) imports the inspector (44); `main.py` (23) imports `settings_store` (46) and the settings router (47); `projects.py` (21) imports `reindex` (48). Still no cycles. There are no import cycles (the graph below is still a DAG). Numbers were not changed, per rule 1. The cleanest fix is a one-time renumbering decided by the project owner; until then the rule is read as "no cycles, new files take the next number".
+⚠ **Ordering exception (Phases 5, 6 and 7, and the identity / access work).** From file 49 on, existing lower-numbered files import the new access and auth helpers (50, 51, 54): the pipeline (35) and memory (45) import `access` (50), and the API routers (20, 21, 22, 30, 40, 47) import `auth_deps` (51). Still no cycles. Phase 5 makes already-numbered files (19, 20, 21, 23, and 24 via the rate limiter 31) import files that did not exist yet, so those imports point at *higher* numbers. Phase 6 does the same for `api/dev.py` (30), which gains the Playground v2 endpoint and imports the pipeline (35) and selection (34). Phase 7 does it once more: `main.py` (23) includes the chat router (40). Phases 8–11 and the retrieval optimisation add more of the same kind: `bm25.py` (27) imports the query helpers (41); `chat.py` (39) imports citations (43), the inspector (44) and memory (45); `conversations.py` (40) imports the inspector (44); `main.py` (23) imports `settings_store` (46) and the settings router (47); `projects.py` (21) imports `reindex` (48). Still no cycles. There are no import cycles (the graph below is still a DAG). Numbers were not changed, per rule 1. The cleanest fix is a one-time renumbering decided by the project owner; until then the rule is read as "no cycles, new files take the next number".
 
 Package markers (`app/__init__.py`, `app/api/__init__.py`, `app/ingestion/__init__.py`, `app/search/__init__.py`, `tests/`) are empty, so they are not numbered.
 
@@ -91,6 +99,8 @@ Package markers (`app/__init__.py`, `app/api/__init__.py`, `app/ingestion/__init
 | 0004 | `alembic/versions/0004_chunks.py` | Chunking (4) | 0003 | `chunks` |
 | 0005 | `alembic/versions/0005_conversations.py` | Chat (7) | 0004 | `conversations`, `messages` |
 | 0006 | `alembic/versions/0006_memory_and_settings.py` | Memory (9), Settings (11) | 0005 | `conversations.summary`, `.summary_checkpoint_message_id`, `.recent_token_estimate`; `settings` |
+| 0007 | `alembic/versions/0007_users_access_audit.py` | Identity (A), access rules (B), audit log (D) | 0006 | `users`, `access_rules`, `audit_log`; `conversations.user_id` |
+| 0008 | `alembic/versions/0008_project_members.py` | Per-project members | 0007 | `project_members` (people named on existing rules, and every member of a project with an "everyone" rule, are carried over) |
 
 `alembic/env.py` imports `app/models.py` (03), `app/config.py` (01) and `app/db.py` (02) so that Alembic sees every table.
 
@@ -111,6 +121,10 @@ Package markers (`app/__init__.py`, `app/api/__init__.py`, `app/ingestion/__init
 | `tests/test_chat_resilience.py` | config, models (03), chat (39), memory (45), inspector (44); citations in the stream, rate-limit notice, silent retries, inactivity timeout, fault injection, Retry / Cancel, Stop while waiting on the LLM, conversation delete, summarization |
 | `tests/test_citations.py` | citations (43), selection (34) |
 | `tests/test_query.py` | query (41), fusion (32): keyword extraction, follow-up resolution, the test-file prior |
+| `tests/test_auth.py` | security (49), auth api (52), models (03): first-run setup, sign-in, throttle, forged / expired tokens, people management, every endpoint requires sign-in |
+| `tests/test_access.py` | access (50), pipeline (35), memory (45): the **leak suite** (retrieval, chat refusal, prompt content, file content, lists and counts, dev tools, conversations, audit, preview-as, summary reset) |
+| `tests/test_trust.py` | safety (54), worker (19), embeddings (24): quota pause, generated-file skip, secret scan |
+| `tests/test_insights.py` | analysis (55), insights api (56): analysis functions, and that dashboard / search / symbols / starters / graph only use readable files |
 | `tests/test_settings.py` | settings_store (46), reindex (48), models (03), embeddings (24), llm (36), indexer (26); masked / encrypted keys, validation, applied from the next call, re-index |
 
 ### Eval harness (not numbered, like tests)
@@ -259,6 +273,37 @@ flowchart TD
     reidx --> projects
     reidx --> sapi
     fusion --> pipe
+    cfg --> sec["49 security.py"]
+    models --> acc["50 access.py"]
+    cfg --> adeps["51 auth_deps.py"]
+    db --> adeps
+    models --> adeps
+    sec --> adeps
+    acc --> adeps
+    sec --> authapi["52 api/auth.py"]
+    adeps --> authapi
+    models --> authapi
+    rules --> accapi["53 api/access.py"]
+    acc --> accapi
+    adeps --> accapi
+    safety["54 ingestion/safety.py"] --> files
+    acc --> pipe
+    acc --> mem
+    adeps --> files
+    adeps --> projects
+    adeps --> meta
+    adeps --> dev
+    adeps --> conv
+    adeps --> sapi
+    authapi --> main
+    accapi --> main
+    ana["55 analysis.py"] --> insapi["56 api/insights.py"]
+    acc --> insapi
+    adeps --> insapi
+    files --> insapi
+    bm25 --> insapi
+    pipe --> insapi
+    insapi --> main
 ```
 
 ---
@@ -318,9 +363,9 @@ Each entry gives the file's job and the one thing a reader needs to know about i
 
 - **36 `app/providers/llm.py`**: `LLMProvider` protocol and `OpenAICompatLLMProvider` (the `openai` SDK; Groq and Gemini differ only in base URL, key, model and the output-token parameter name, chosen by `LLM_PROVIDER`). `stream(messages, max_output_tokens=None)` first calls `limiter.acquire(requests=1, tokens=prompt estimate + max output tokens)` on the shared `groq_llm` / `gemini_llm` limiter, then yields **only content tokens** (reasoning deltas are dropped), asks the provider for usage and, when the stream ends, **settles** the reservation to the tokens really used. `wait_estimate(messages)` reports how long the limiter would make this call wait. SDK retries (`LLM_MAX_RETRIES`) cover 429 / 5xx before the first token; any SDK error becomes `LLMError`. `RoutingLLMProvider` wraps the primary Groq model with a fallback Groq model that has its own limiter (`groq_llm_fallback`): a call goes to the fallback only when the primary would wait longer than `LLM_FALLBACK_WAIT_SECONDS` and the fallback would wait less. `set_llm_provider` lets tests install a fake.
 - **37 `app/generation/prompts.py`**: the system prompt (scope guardrail, strict grounding, adaptive Markdown, "Simplified example" labelling, context-is-data rule), the fixed no-context and generic-error texts, and `title_from_question` (the application-side conversation title, no LLM call).
-- **38 `app/generation/context_builder.py`**: `build_messages(question, chunks, history, summary)` returns the system prompt (with the conversation summary appended when there is one) + recent messages after the summary's checkpoint (capped by `CHAT_HISTORY_MESSAGES` and `CHAT_HISTORY_TOKENS`, newest win) + one user message holding the labelled retrieved context (`--- path, lines a-b ---`, trailing whitespace and blank-line runs removed to save tokens) and the question.
-- **39 `app/generation/chat.py`**: `stream_answer(...)`, an async generator of `Event`s (`[waiting]`, `token`*, `sources`, then `done` | `no_context` | `error`), independent of HTTP. It loads memory (45), resolves a follow-up into a self-contained retrieval query (41), runs fresh retrieval for every question, skips the LLM on `NoRelevantContext`, builds citations (43) and the prompt (38), records the prompt for the dev inspector (44), announces a rate-limit wait, and retries a failure before the first token silently (`GENERATION_RETRIES`). The LLM runs in a producer task behind a queue with an inactivity timeout, so a Stop cancels cleanly even mid-wait. The assistant message (with frozen `sources_json`) and `gen_state=answered` are saved in one transaction only after the stream completes; `failed` or `stopped` are recorded otherwise. Dev fault flags (`FAULT_LLM`, `FAULT_RETRIEVAL`) are honoured only with `DEV_MODE=true`. Short sessions per step, so no connection is held while the LLM streams.
-- **40 `app/api/conversations.py`**: `GET /projects/{id}/conversations`, `GET /conversations/{id}` (restore, no LLM), `POST /projects/{id}/conversations` (first message: creates the conversation) and `POST /conversations/{id}/messages`. Both POSTs validate (`ChatRequest`: 1 to 8,000 characters after trimming), require at least one READY file (409 otherwise), save the user message (`gen_state=pending`), and stream SSE: `conversation`, `token`*, then `done` | `no_context` | `error`. Errors carry only the generic text. Uses `get_session_factory` (02) for the stream's own sessions. Also: `DELETE /conversations/{id}` (messages go, project files and chunks stay), `POST /messages/{id}/retry` (same user message, fresh retrieval and LLM; only for the newest message when `failed` or `stopped`), `POST /messages/{id}/dismiss` (Cancel: `gen_state=dismissed`) and the dev-only `GET /conversations/{id}/context`.
+- **38 `app/generation/context_builder.py`**: `build_messages(question, chunks, history, summary, pinned=None)` returns the system prompt (with the conversation summary appended when there is one) + recent messages after the summary's checkpoint (capped by `CHAT_HISTORY_MESSAGES` and `CHAT_HISTORY_TOKENS`, newest win) + one user message holding the labelled retrieved context (`--- path, lines a-b ---`, trailing whitespace and blank-line runs removed to save tokens) and the question. With `pinned` (select and ask) the selected lines lead in their own block ("The user selected these lines of path, lines a-b ... `this` means exactly this code", fenced) followed by the other retrieved context, so "Explain this" has something to point at.
+- **39 `app/generation/chat.py`**: `stream_answer(...)`, an async generator of `Event`s (`[waiting]`, `token`*, `sources`, then `done` | `no_context` | `error`), independent of HTTP. It loads memory (45), resolves a follow-up into a self-contained retrieval query (41), runs fresh retrieval for every question, skips the LLM on `NoRelevantContext`, builds citations (43) and the prompt (38), records the prompt for the dev inspector (44), announces a rate-limit wait, and retries a failure before the first token silently (`GENERATION_RETRIES`). The LLM runs in a producer task behind a queue with an inactivity timeout, so a Stop cancels cleanly even mid-wait. The assistant message (with frozen `sources_json`) and `gen_state=answered` are saved in one transaction only after the stream completes; `failed` or `stopped` are recorded otherwise. Dev fault flags (`FAULT_LLM`, `FAULT_RETRIEVAL`) are honoured only with `DEV_MODE=true`. Short sessions per step, so no connection is held while the LLM streams. `stream_selection_answer(...)` is the ephemeral variant for "ask about these lines" in the file viewer: the selection always leads the context, retrieval (question + selected code as the search text) only adds other files and its failure is tolerated, and nothing is saved (no conversation, no message); one audit row with `conversation_id` null. Events: `[waiting]`, `token`*, `sources`, `done` | `error`.
+- **40 `app/api/conversations.py`**: `GET /projects/{id}/conversations`, `GET /conversations/{id}` (restore, no LLM), `POST /projects/{id}/conversations` (first message: creates the conversation) and `POST /conversations/{id}/messages`. Both POSTs validate (`ChatRequest`: 1 to 8,000 characters after trimming), require at least one READY file (409 otherwise), save the user message (`gen_state=pending`), and stream SSE: `conversation`, `token`*, then `done` | `no_context` | `error`. Errors carry only the generic text. Uses `get_session_factory` (02) for the stream's own sessions. Also: `DELETE /conversations/{id}` (messages go, project files and chunks stay), `POST /messages/{id}/retry` (same user message, fresh retrieval and LLM; only for the newest message when `failed` or `stopped`), `POST /messages/{id}/dismiss` (Cancel: `gen_state=dismissed`) and the dev-only `GET /conversations/{id}/context`. `POST /files/{id}/ask` (`FileAskRequest`: question up to 500 characters + line range) answers about selected lines in the file viewer, streamed and **not saved**; access goes through `file_for` (a hidden file is a 404), the lines are read from the stored file by the server.
 
 ### Retrieval optimisation, citations, memory, settings (phases 8–11)
 
@@ -328,10 +373,21 @@ Each entry gives the file's job and the one thing a reader needs to know about i
 - **42 `app/search/backfill.py`**: `python -m app.search.backfill` fills `path_text` and `section` on documents indexed before those fields existed. No embeddings are computed.
 - **43 `app/generation/citations.py`**: `build_citations(chunks)`: sources in retrieval order, grouped by file, each line range kept separate, exact duplicates removed; source files show line ranges, other files the path only. Output is stored in `messages.sources_json`.
 - **44 `app/generation/inspector.py`**: in-memory store of each conversation's latest prompt (bounded, dev-only reads).
-- **45 `app/generation/memory.py`**: after each saved answer, counts the tokens after the summary's checkpoint and, past `SUMMARY_THRESHOLD_TOKENS`, folds older exchanges into `conversations.summary` in a background task (same LLM wrapper, so the same rate-limit window), keeping the newest `SUMMARY_KEEP_MESSAGES` verbatim. A failure leaves the previous summary in place.
+- **45 `app/generation/memory.py`**: builds the history as the prompt carries it: `history_pairs` sends every answer but the newest as a short digest (`digest_answer`: code dropped, first sentences, cited files; `HISTORY_ANSWER_CHARS`, switch `HISTORY_DIGEST_ANSWERS`), because project facts are re-retrieved every turn and stored messages are never changed. After each saved answer it measures the tokens after the summary's checkpoint in that digested form and folds older exchanges into `conversations.summary` in a background task (same LLM wrapper, so the same rate-limit window) only when needed: `window_nearly_full` (history reaches `CHAT_HISTORY_MESSAGES`, or 80% of `CHAT_HISTORY_TOKENS`) or the digested size passes `SUMMARY_THRESHOLD_TOKENS`. The newest `SUMMARY_KEEP_MESSAGES` stay verbatim. A failure leaves the previous summary in place.
 - **46 `app/settings_store.py`**: the editable settings (`SettingsPatch`, range-checked), Fernet encryption of API keys with `data/secret.key`, masked read view, and `load_overrides` / `save`, which apply values to the running `settings` object and reset the provider caches so changes take effect from the next call.
 - **47 `app/api/settings.py`**: `GET /settings`, `PUT /settings`, `POST /settings/test` (unsaved form values may be tested; failure text is always generic) and `sync_reindex_flags`, which marks projects embedded with another fingerprint `needs_reindex` (and releases them when the fingerprint matches again).
 - **48 `app/ingestion/reindex.py`**: `start(project_id, sessions)` runs a background re-embed of a project's stored chunks into the current fingerprint's index with the same chunk ids; chunks already in the new index are skipped, so an interrupted run resumes; the project switches fingerprint only when every chunk is in, then the old index's docs are removed.
+
+### Identity, access and insights (gaps.md phases A, B, D, E and trust fixes)
+
+- **49 `app/security.py`**: scrypt password hashing (salted, constant-time compare, a dummy hash for unknown emails) and HMAC-signed session tokens (`user_id.expiry.signature`, key in `data/session.key`). Standard library only.
+- **50 `app/access.py`**: the resolver. People belong to projects individually (`ProjectMember`); a non-admin who is not a member reads nothing in that project and cannot see it exists, and `everyone` means every *member of that project*. An `AccessRule` sits on a folder or file path (`""` = whole project) and says `everyone`, `people` or `admin`; the longest matching path wins; a file no rule covers is admin only; admins read everything. `readable_files` / `readable_file_ids` / `can_read_file` / `visible_project_ids` are the only way any surface decides what a person may see. `SYSTEM_ADMIN` is the viewer of offline tools (the eval); request handlers never use it.
+- **51 `app/auth_deps.py`**: `current_user` (cookie or Bearer token; `LOCAL_MODE` acts as the first admin when no credential is sent; `X-Preview-As` lets an admin act as a member), `require_admin`, `not_previewing`, `dev_admin_only` (404 for non-admins), and `project_for` / `file_for` (404 for "missing" and "not allowed", so existence never leaks).
+- **52 `app/api/auth.py`**: `/auth/status`, `/auth/setup` (first run only, advisory-locked), `/auth/login` (5 failures lock an address for a minute), `/auth/logout`, `/auth/me`, and admin `/users` CRUD (cannot remove yourself or the last admin; removing a person takes them off every rule and deletes their chats).
+- **53 `app/api/access.py`**: admin `GET/PUT/DELETE /projects/{id}/access`, `GET /projects/{id}/access/person/{user}` (every file with the reason it is or is not readable) and `GET /projects/{id}/audit`, plus `GET/POST/DELETE /projects/{id}/members` (add an existing account by email or create a new one; remove takes them off every rule and deletes their chats in that project). A rule may only name members. Any rule or membership change clears the project's conversation summaries.
+- **54 `app/ingestion/safety.py`**: content checks run at upload: credential patterns and credential file names (skipped, reported with the kind but never the secret), generated / minified source (long lines, source-map footers, "generated" headers).
+- **55 `app/analysis.py`**: pure functions: stack from manifests, entry points, env vars, symbols, import extraction and resolution (Python `ast`, JS/TS, Java, C includes), transitive importers.
+- **56 `app/api/insights.py`**: `GET /projects/{id}/dashboard | search | symbols | starters | graph | graph/{file_id}`. All of it is computed from `access.readable_files`; the analysis is cached per set of readable (file, hash) pairs. Search is BM25 only (no embedding call).
 
 ### Rate limiting (phase 5, shared by every provider)
 
@@ -392,6 +448,10 @@ Each entry gives the file's job and the one thing a reader needs to know about i
 5. Optional: if `RERANK_TOP_N > 0` the reranker (33) scores `"{file_path}\n{content}"` for the first N candidates and they are served first in score order.
 6. `relative_filter` (34) keeps chunks within `RELATIVE_CUTOFF` of the best vector similarity or among the best `BM25_PROTECT` BM25 hits; `select` (34) applies overlap cleanup, Top-K and the token budget. An empty result is `NoRelevantContext`.
 
+### Select and ask (file viewer)
+
+`POST /files/{id}/ask` (40) -> `file_for` + ready check -> `_pinned` reads the lines server-side -> `chat.stream_selection_answer` (39) -> `build_messages(pinned=...)` (38) -> SSE `token`* `sources` `done`. The frontend shows it in a small window over the viewer (`SelectionAnswer.tsx`); "Open in chat" is the only path that saves it (the normal chat endpoints with `selection`).
+
 ### Chat turn (Phases 7–10)
 
 1. `conversations.py` (40) validates the body, requires a READY file and a project that does not need a re-index, creates the conversation on the first message (title from `title_from_question`, 37) and saves the user message with `gen_state=pending`; then it streams `chat.stream_answer` (39) as SSE, starting with `conversation`. Retry re-enters here with the existing user message.
@@ -409,6 +469,13 @@ Each entry gives the file's job and the one thing a reader needs to know about i
 3. `POST /projects/{id}/reindex` (21) starts `reindex` (48): embed stored chunks in slices through the shared limiter into the new index, same chunk ids, skipping ids already there.
 4. When every chunk is in, the project's fingerprint and status are switched, then the old index's docs for the project are removed. On error the project stays `needs_reindex` and the job can be run again.
 
+### Sign-in and access (every request)
+
+1. `auth_deps.current_user` (51) reads the session cookie or Bearer token, loads the user (a deleted user's token stops working at once) and, for an admin sending `X-Preview-As`, returns that member instead (read-only).
+2. Every route that returns content or names files goes through `project_for` / `file_for` / `access.readable_*` (50). Retrieval (35) takes a required `viewer` and puts the readable READY file ids into both Elasticsearch queries as a filter, so a forbidden file cannot crowd out a permitted one; the gate then runs on permitted content only, so a question only restricted files could answer is refused exactly like an off-topic one.
+3. Chat writes one `audit_log` row per question (who, what, which files were served, the outcome). Conversations belong to their creator only.
+4. A rule change (53) applies to the next request with no re-index and clears conversation summaries; `memory.drop_unreadable` leaves out answers citing files a person can no longer read; frozen citations are re-checked on display and become "Source no longer available".
+
 ### Key design property
 
 - The worker (19) never imports the API layer, so ingestion can run without HTTP. Keep it that way.
@@ -417,11 +484,11 @@ Each entry gives the file's job and the one thing a reader needs to know about i
 
 ## Adding a feature
 
-1. Find the highest number in the table above (currently **48**).
+1. Find the highest number in the table above (currently **56**).
 2. List each new file's imports. Use only files already in the table, or new files you number before the file that imports them.
 3. Assign the next free numbers in dependency order. Parents first, children after.
 4. Add the rows to the table, the graph and the "What each file does" section of this document, in the same edit.
-5. If the feature changes the schema, add a new migration whose `down_revision` is the latest revision (currently `0006`; Phases 5 and 6 added no migration), and add its row to the migrations table.
+5. If the feature changes the schema, add a new migration whose `down_revision` is the latest revision (currently `0008`; Phases 5 and 6 added no migration), and add its row to the migrations table.
 6. Keep `Docs/Plan/Diagrams/` in sync, as CLAUDE.md requires.
 
 ---

@@ -6,16 +6,71 @@ import { Badge, Icon, Skeleton, Spinner, useToast } from "../components/ui";
 type Typed = Partial<Record<SecretName, string>>;
 type Result = { ok: boolean; message: string } | null;
 
-function Section({ title, description, children, footer }: {
-  title: string; description: string; children: ReactNode; footer?: ReactNode;
+type IconName = Parameters<typeof Icon>[0]["name"];
+
+const SECTIONS: { id: string; title: string; icon: IconName }[] = [
+  { id: "general", title: "General", icon: "settings" },
+  { id: "llm", title: "LLM", icon: "chat" },
+  { id: "embeddings", title: "Embeddings", icon: "layers" },
+  { id: "reranker", title: "Reranker", icon: "sliders" },
+  { id: "advanced", title: "Advanced RAG", icon: "cpu" },
+];
+
+function Section({ id, title, description, children, footer }: {
+  id: string; title: string; description: string; children: ReactNode; footer?: ReactNode;
 }) {
+  const icon = SECTIONS.find((s) => s.id === id)?.icon ?? "settings";
   return (
-    <section className="card animate-slide-up p-6">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      <p className="mt-0.5 text-sm text-slate-500">{description}</p>
-      <div className="mt-5 grid gap-5 sm:grid-cols-2">{children}</div>
-      {footer && <div className="mt-5 border-t border-slate-200 pt-4">{footer}</div>}
+    <section id={`settings-${id}`} className="card animate-slide-up scroll-mt-6 overflow-hidden">
+      <header className="flex items-start gap-3 border-b border-slate-200 px-6 py-4">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-link">
+          <Icon name={icon} className="h-[18px] w-[18px]" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+          <p className="mt-0.5 text-sm text-slate-500">{description}</p>
+        </div>
+      </header>
+      <div className="grid gap-5 p-6 sm:grid-cols-2">{children}</div>
+      {footer && <div className="border-t border-slate-200 bg-slate-50/60 px-6 py-4">{footer}</div>}
     </section>
+  );
+}
+
+/** Sticky index of the sections; highlights the one in view. */
+function SectionNav() {
+  const [active, setActive] = useState(SECTIONS[0].id);
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const seen = new Map<string, boolean>();
+    const watch = new IntersectionObserver((entries) => {
+      entries.forEach((e) => seen.set(e.target.id.replace("settings-", ""), e.isIntersecting));
+      const first = SECTIONS.find((s) => seen.get(s.id));
+      if (first) setActive(first.id);
+    }, { rootMargin: "-10% 0px -55% 0px" });
+    SECTIONS.forEach((s) => { const el = document.getElementById(`settings-${s.id}`); if (el) watch.observe(el); });
+    return () => watch.disconnect();
+  }, []);
+  return (
+    <nav aria-label="Settings sections" className="sticky top-6 hidden self-start lg:block">
+      <p className="mb-2 px-3 text-xs font-medium text-slate-500">On this page</p>
+      <ul className="space-y-0.5">
+        {SECTIONS.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              onClick={() => document.getElementById(`settings-${s.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              aria-current={active === s.id ? "true" : undefined}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-left text-sm transition-colors ${
+                active === s.id ? "bg-brand-500/10 font-medium text-brand-link" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              <Icon name={s.icon} className="h-4 w-4 shrink-0" /> {s.title}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 
@@ -156,18 +211,21 @@ export default function SettingsPage() {
   const groq = form.llm_provider === "groq";
 
   return (
-    <div className="mx-auto max-w-3xl pb-24">
+    <div className="mx-auto max-w-5xl pb-24">
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+            <Icon name="lock" className="h-3.5 w-3.5 shrink-0" />
             Changes to the model, reranker and retrieval apply from the next question. Keys are stored encrypted.
           </p>
         </div>
       </div>
 
-      <div className="mt-6 space-y-5">
-        <Section title="General" description="Developer tools are for testing and debugging the pipeline.">
+      <div className="mt-6 grid gap-8 lg:grid-cols-[11rem_minmax(0,1fr)]">
+      <SectionNav />
+      <div className="min-w-0 space-y-5">
+        <Section id="general" title="General" description="Developer tools are for testing and debugging the pipeline.">
           <label className="flex cursor-pointer items-center gap-4 sm:col-span-2">
             <input
               type="checkbox" role="switch" checked={form.dev_mode}
@@ -193,7 +251,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section
-          title="LLM"
+          id="llm" title="LLM"
           description="The model that writes answers."
           footer={<TestButton onClick={() => test("llm")} result={results.llm ?? null} busy={testing === "llm"} />}
         >
@@ -248,7 +306,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section
-          title="Embeddings"
+          id="embeddings" title="Embeddings"
           description="How files and questions are turned into vectors."
           footer={
             <div className="space-y-3">
@@ -277,7 +335,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section
-          title="Reranker"
+          id="reranker" title="Reranker"
           description="An optional second pass that reorders candidates. Off by default: it costs seconds per question and did not improve accuracy."
           footer={form.reranker === "jev" ? <TestButton onClick={() => test("jev")} result={results.jev ?? null} busy={testing === "jev"} /> : undefined}
         >
@@ -307,7 +365,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section
-          title="Advanced RAG"
+          id="advanced" title="Advanced RAG"
           description="Retrieval tuning. The defaults were chosen from the evaluation set; change them with care."
         >
           <Field label="Candidates per search" hint="Top-K asked of keyword search and vector search each.">
@@ -349,13 +407,14 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+      </div>
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-surface/90 backdrop-blur transition-transform duration-200 ${
+        className={`fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-surface/90 shadow-pop backdrop-blur transition-transform duration-200 ${
           dirty ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-6 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 py-3">
           <span className="flex items-center gap-2 text-sm text-slate-600">
             <Badge tone="warning" dot>Unsaved changes</Badge>
             <span className="hidden sm:inline">Leaving this page discards them.</span>

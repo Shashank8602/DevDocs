@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+import { apiFetch } from "./http";
 
 export interface Project {
   id: string;
@@ -9,10 +9,13 @@ export interface Project {
   created_at: string;
   updated_at: string;
   last_ingested_at: string | null;
+  /** Set while ingestion waits for the embedding quota: nothing failed, it resumes by itself. */
+  paused_until: string | null;
+  paused_daily_quota: boolean;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await apiFetch(path, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
   });

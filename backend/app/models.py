@@ -74,6 +74,10 @@ class Conversation(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
+    # Owner. Nullable only for chats made before sign-in existed (the first admin adopts them).
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     title: Mapped[str] = mapped_column(String(100))  # derived from the first question, never changes
     # Conversation memory: older messages folded into `summary`; `summary_checkpoint_message_id` is the last
     # message it covers. `recent_token_estimate` counts the messages after it (the summarization trigger).
@@ -111,4 +115,71 @@ class AppSettings(Base):
     data: Mapped[dict] = mapped_column(JSONB, default=dict)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(254), unique=True)  # stored lower-case
+    name: Mapped[str] = mapped_column(String(100), default="", server_default="")
+    password_hash: Mapped[str] = mapped_column(String(300))
+    role: Mapped[str] = mapped_column(String(10), default="member", server_default="member")  # admin | member
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == "admin"
+
+
+class ProjectMember(Base):
+    """A person who belongs to one project. Members are added per project; a non-admin who is not a member of a
+    project cannot see that it exists. Membership alone shares nothing: files are shared by access rules."""
+    __tablename__ = "project_members"
+    __table_args__ = (UniqueConstraint("project_id", "user_id", name="uq_project_members"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AccessRule(Base):
+    """Who may read a folder or a file. `path` is a project-relative POSIX path ("" = the whole project).
+    The most specific (longest) matching rule wins; no matching rule means admin only."""
+    __tablename__ = "access_rules"
+    __table_args__ = (UniqueConstraint("project_id", "path", name="uq_access_rules_project_path"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    path: Mapped[str] = mapped_column(Text)
+    visibility: Mapped[str] = mapped_column(String(10))  # everyone | people | admin
+    user_ids: Mapped[list] = mapped_column(JSONB, default=list)  # user id strings, used when visibility = people
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AuditLog(Base):
+    """One row per question asked. Names and paths are copied in so the log survives deletions."""
+    __tablename__ = "audit_log"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)  # no FK on purpose
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    user_email: Mapped[str] = mapped_column(String(254))
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    question: Mapped[str] = mapped_column(Text)
+    served_file_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    served_paths: Mapped[list] = mapped_column(JSONB, default=list)
+    outcome: Mapped[str] = mapped_column(String(10))  # served (context given to the model) | refused | error
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

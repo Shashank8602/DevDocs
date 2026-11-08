@@ -8,9 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth_deps import dev_admin_only
 from app.config import settings
 from app.db import get_session
-from app.models import Chunk, File, Project
+from app.models import Chunk, File, Project, User
 from app.providers.embeddings import EmbeddingError, get_embedding_provider
 from app.retrieval import pipeline
 from app.retrieval.bm25 import Hit, bm25_search
@@ -32,7 +33,7 @@ def _dev_only() -> None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
 
 
-router = APIRouter(prefix="/projects/{project_id}", tags=["dev"], dependencies=[Depends(_dev_only)])
+router = APIRouter(prefix="/projects/{project_id}", tags=["dev"], dependencies=[Depends(_dev_only), Depends(dev_admin_only)])
 
 
 @router.get("/es-count", response_model=ESCountOut)
@@ -132,7 +133,7 @@ async def retrieval_pipeline(
     project_id: uuid.UUID, q: str = Query(min_length=1, max_length=2000),
     gate: float | None = Query(None, description="override the vector-similarity gate threshold for this query"),
     cutoff: float | None = Query(None, ge=0, description="override the relative cut-off (0 = no filter)"),
-    session: AsyncSession = Depends(get_session),
+    admin: User = Depends(dev_admin_only), session: AsyncSession = Depends(get_session),
 ):
     """Playground v2: the whole retrieval pipeline with every stage visible
     (BM25 -> vector -> RRF -> gate -> relative filter -> final context and its token count)."""
@@ -140,7 +141,9 @@ async def retrieval_pipeline(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Project not found")
     error = None
     try:
-        trace = await pipeline.run(session, project_id, q, gate_threshold=gate, relative_cutoff=cutoff)
+        trace = await pipeline.run(
+            session, project_id, q, viewer=admin, gate_threshold=gate, relative_cutoff=cutoff,
+        )
     except pipeline.RetrievalError as exc:
         log.warning("playground pipeline failed: %r", exc)
         error = "Search failed. Check that Elasticsearch and the embedding key are available."

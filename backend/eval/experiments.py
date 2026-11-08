@@ -23,6 +23,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.access import SYSTEM_ADMIN
 from app.config import settings
 from app.db import SessionLocal
 from app.providers.embeddings import EmbeddingError, get_embedding_provider, set_embedding_provider
@@ -62,7 +63,7 @@ async def record(args) -> list[dict]:
         for i, q in enumerate(questions, 1):
             try:
                 trace = await pipeline.run(
-                    session, pid, q["q"], gate_threshold=-INF, relative_cutoff=0, rerank_top_n=10 ** 6,
+                    session, pid, q["q"], viewer=SYSTEM_ADMIN, gate_threshold=-INF, relative_cutoff=0, rerank_top_n=10 ** 6,
                 )
             except (pipeline.RetrievalError, EmbeddingError) as exc:
                 raise SystemExit(f"stopped at question {i}: {exc}")

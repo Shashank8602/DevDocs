@@ -34,15 +34,15 @@ export default function PdfRenderer({ data }: { data: ArrayBuffer }) {
   if (failed) return <p className="p-4 text-sm text-red-600">This PDF couldn't be displayed.</p>;
   if (!doc) return <p className="p-4 text-sm text-slate-500">Loading…</p>;
 
-  const btn = "rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-40";
+  const btn = "btn-secondary px-3 py-1.5";
   return (
     <div className="flex flex-col items-center gap-3 p-4">
       <div className="flex items-center gap-3">
         <button className={btn} disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button>
-        <span className="text-sm text-slate-600">Page {page} of {doc.numPages}</span>
+        <span className="text-sm tabular-nums text-slate-600">Page {page} of {doc.numPages}</span>
         <button className={btn} disabled={page >= doc.numPages} onClick={() => setPage(page + 1)}>Next</button>
       </div>
-      <canvas ref={canvas} className="max-w-full border border-slate-200 shadow-sm" />
+      <canvas ref={canvas} className="max-w-full rounded-lg border border-slate-200 bg-white shadow-card" />
     </div>
   );
 }

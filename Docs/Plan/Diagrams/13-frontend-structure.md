@@ -1,35 +1,45 @@
 # 13 — Frontend Structure
 
-Source: Plan → Frontend and Repository Layout.
+Source: Plan → Frontend and Repository Layout; visual rules in [Frontend-Design.md](../Frontend-Design.md). Updated 2026-11-08.
 
 ## Routing and layout
 
 ```mermaid
 flowchart TD
-    App["App (react-router)"] --> Splash["Splash<br/>logo ~2–3 s, fade"]
-    App --> GI["GlobalIngestionIndicator<br/>polls /ingestion/active,<br/>tooltip with project name"]
-    App --> PP["ProjectsPage<br/>cards, create / rename / delete"]
-    App --> PW["ProjectWorkspace<br/>header: name + status"]
-    App --> SP["SettingsPage<br/>LLM | Embeddings | Reranker | Advanced RAG"]
+    App["App (react-router)"] --> Splash["Splash<br/>logo ~0.9 s, once per session"]
+    App --> Gate{"AuthContext phase"}
+    Gate -- "setup / signed-out" --> LP["LoginPage<br/>first-run admin or sign in"]
+    Gate -- "signed-in" --> L["Layout"]
 
-    PW --> OV["Overview tab<br/>stats + language bar"]
-    PW --> FT["Files tab"]
-    PW --> CH["Chat tab"]
+    L --> H["Header<br/>breadcrumbs, ingestion indicator,<br/>server status, theme toggle"]
+    H --> AM["Account menu<br/>name + role, Settings (admin), Sign out"]
+    AM --> SP["SettingsPage (admin)<br/>section index: General | LLM | Embeddings |<br/>Reranker | Advanced RAG"]
+    L --> PP["ProjectsPage<br/>cards with initials, '⋯' menu: edit / delete"]
+    L --> PW["ProjectWorkspace<br/>sidebar folds to an icon rail<br/>(folded by default on Chat)"]
 
-    FT --> Tree["Collapsible tree + search (2+ chars)"]
-    FT --> Badge["Status badges + failed popover<br/>Retry / Replace"]
-    FT --> Up["Upload / Re-upload<br/>webkitdirectory + rules from /upload-rules"]
+    PW --> DB["Dashboard<br/>counts, languages, stack, README,<br/>entry points, largest files, env vars"]
+    PW --> MP["Map<br/>import graph + impact panel"]
+    PW --> FT["Files"]
+    PW --> SR["Search<br/>text search + symbols"]
+    PW --> CH["Chat"]
+    PW --> AC["Access (admin)<br/>People, By folder, By person,<br/>Matrix, Audit log"]
 
-    CH --> Side["Sidebar: New Chat, switch, delete"]
-    CH --> Msgs["Message list<br/>react-markdown + syntax highlight"]
-    CH --> Comp["Composer<br/>validate, disabled while generating, Stop"]
-    CH --> Src["Sources list"]
+    FT --> Tree["Tree with file icons + search (2+ chars)<br/>drag-and-drop upload"]
+    FT --> Badge["Ready dot / status badges<br/>failed popover: Retry / Replace"]
+
+    CH --> Side["Conversation list: New Chat, switch, delete"]
+    CH --> Msgs["Messages<br/>react-markdown + highlight.js"]
+    CH --> Comp["Composer<br/>validate, Stop while generating"]
+    CH --> Src["Numbered source cards"]
 
     Src --> FV
     Tree --> FV
-    FV["FloatingFileViewer"] --> Code["CodeRenderer<br/>line numbers + highlights"]
+    SR --> FV
+    MP --> FV
+    FV["FloatingFileViewer<br/>breadcrumb header, cited-line chips"] --> Code["CodeRenderer<br/>line numbers + tinted cited lines"]
+    Code --> Ask["SelectionAsk / SelectionAnswer<br/>select lines and ask"]
     FV --> Md["MarkdownRenderer"]
-    FV --> Pdf["PdfRenderer (react-pdf)"]
+    FV --> Pdf["PdfRenderer (pdf.js)"]
     FV --> Docx["DocxRenderer (mammoth)"]
     FV --> Tbl["TableRenderer (papaparse)"]
     FV --> Txt["TextRenderer"]

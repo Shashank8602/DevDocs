@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { ChatEvent, ChatMessage, chatApi, ContextInspection, ConversationSummary, SourceRef } from "../../api/chat";
+import { AskSelection, ChatEvent, ChatMessage, chatApi, ContextInspection, ConversationSummary, SourceRef } from "../../api/chat";
 import { filesApi, ProjectFile } from "../../api/files";
+import { insightsApi } from "../../api/insights";
 const FloatingFileViewer = lazy(() => import("../viewer/FloatingFileViewer"));
 import Modal from "../Modal";
-import { EmptyState, Icon, Skeleton, Spinner, useToast } from "../ui";
+import { CopyButton, EmptyState, Icon, Skeleton, Spinner, useToast } from "../ui";
 import AssistantMarkdown from "./AssistantMarkdown";
 import {
   AssistantAvatar, BlankState, Composer, ContextInspectorDialog, MessageView, StoppedBar, ThinkingIndicator,
@@ -45,14 +46,17 @@ function Sidebar({
           <Icon name="plus" /> New Chat
         </button>
       </div>
+      {items.length > 0 && <p className="px-5 pb-1 pt-1 text-xs font-medium text-slate-500">Recent</p>}
       <nav className="max-h-48 min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-3 md:max-h-none" aria-label="Conversations">
         {loading && <><Skeleton className="mx-1 h-9" /><Skeleton className="mx-1 mt-1 h-9" /></>}
-        {!loading && items.length === 0 && <p className="px-3 py-2 text-xs text-slate-500">No conversations yet.</p>}
+        {!loading && items.length === 0 && (
+          <p className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500"><Icon name="chat" className="h-3.5 w-3.5" /> No conversations yet.</p>
+        )}
         {items.map((c) => (
           <div
             key={c.id}
             className={`group flex items-center gap-1 rounded-lg transition ${
-              c.id === activeId ? "bg-brand-500/10 text-slate-900" : "text-slate-700 hover:bg-slate-100"
+              c.id === activeId ? "bg-surface text-slate-900 shadow-card ring-1 ring-slate-200" : "text-slate-700 hover:bg-slate-100"
             }`}
           >
             <button
@@ -62,7 +66,7 @@ function Sidebar({
               className="min-w-0 flex-1 px-3 py-2 text-left disabled:opacity-60"
             >
               <span className="block truncate text-sm font-medium">{c.title}</span>
-              <span className="block text-[11px] text-slate-500">{ago(c.updated_at)}</span>
+              <span className="block text-xs text-slate-500">{ago(c.updated_at)}</span>
             </button>
             <button
               onClick={() => onDelete(c)}
@@ -79,8 +83,12 @@ function Sidebar({
 }
 
 export default function ChatTab({
-  projectId, onUpload, needsReindex = false,
-}: { projectId: string; onUpload: () => void; needsReindex?: boolean }) {
+  projectId, onUpload, needsReindex = false, prefill, pendingAsk, onAskHandled,
+}: {
+  projectId: string; onUpload: () => void; needsReindex?: boolean; prefill?: string;
+  /** A question (with selected lines) started elsewhere, such as the Files viewer: sent once chat is ready. */
+  pendingAsk?: { question: string; selection: AskSelection } | null; onAskHandled?: () => void;
+}) {
   const qc = useQueryClient();
   const toast = useToast();
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -105,6 +113,11 @@ export default function ChatTab({
     queryFn: () => filesApi.list(projectId),
   });
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: filesApi.config, staleTime: Infinity });
+  const { data: starters } = useQuery({
+    queryKey: ["projects", projectId, "starters"],
+    queryFn: () => insightsApi.starters(projectId),
+    staleTime: 60_000,
+  });
   const { data: conversations = [], isLoading: listLoading } = useQuery({
     queryKey: ["projects", projectId, "conversations"],
     queryFn: () => chatApi.conversations(projectId),
@@ -209,15 +222,23 @@ export default function ChatTab({
     }
   }
 
-  function send(text: string) {
+  function send(text: string, selection?: AskSelection) {
     const content = text.trim();
     if (!content || busy) return;
     setMessages((m) => [...m, {
       id: `local-${Date.now()}`, role: "user", content, sources_json: null, gen_state: "pending",
       created_at: new Date().toISOString(),
     }]);
-    void run((signal) => (conversationId ? chatApi.send(conversationId, content, signal) : chatApi.start(projectId, content, signal)));
+    void run((signal) => (conversationId ? chatApi.send(conversationId, content, signal, selection) : chatApi.start(projectId, content, signal, selection)));
   }
+
+  useEffect(() => {
+    if (pendingAsk && restored && !filesLoading && !busy) {
+      onAskHandled?.();
+      send(pendingAsk.question, pendingAsk.selection);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAsk, restored, filesLoading, busy]);
 
   function stop() {
     stoppedByUser.current = true;
@@ -320,10 +341,17 @@ export default function ChatTab({
       />
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-          <h2 className="truncate text-sm font-semibold text-slate-800">
-            {conversations.find((c) => c.id === conversationId)?.title ?? "New chat"}
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-surface/60 px-4">
+          <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-800">
+            <Icon name="chat" className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="truncate">{conversations.find((c) => c.id === conversationId)?.title ?? "New chat"}</span>
           </h2>
+          {messages.length > 0 && (
+            <CopyButton
+              label="Copy chat" className="mr-auto ml-3 text-slate-500"
+              text={messages.map((m) => `${m.role === "user" ? "You" : "DevDocs"}:\n${m.content}`).join("\n\n---\n\n")}
+            />
+          )}
           {config?.dev_mode && conversationId && (
             <button onClick={() => setInspecting(true)} className="btn-ghost px-2 py-1 text-xs" title="Dev: show the exact prompt of the last turn">
               <Icon name="bug" className="h-3.5 w-3.5" /> Context
@@ -334,7 +362,7 @@ export default function ChatTab({
         <div className="min-h-0 flex-1 overflow-y-auto" aria-live="polite">
           <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {opening && <div className="flex justify-center py-10 text-slate-400"><Spinner className="h-5 w-5" /></div>}
-            {blank && <BlankState onPick={send} />}
+            {blank && <BlankState onPick={send} starters={starters?.questions ?? []} />}
             {!opening && messages.map((m) => <MessageView key={m.id} m={m} onOpenSource={openSource} />)}
 
             {busy && (
@@ -366,12 +394,12 @@ export default function ChatTab({
           </div>
         </div>
 
-        <Composer busy={busy} onSend={send} onStop={stop} maxChars={MAX_CHARS} />
+        <Composer busy={busy} onSend={send} onStop={stop} maxChars={MAX_CHARS} prefill={prefill} />
       </section>
 
       {viewing && (
         <Suspense fallback={null}>
-          <FloatingFileViewer file={viewing.file} highlight={viewing.highlight} onClose={() => setViewing(null)} />
+          <FloatingFileViewer file={viewing.file} highlight={viewing.highlight} onClose={() => setViewing(null)} onAsk={(q, sel) => { setViewing(null); send(q, sel); }} />
         </Suspense>
       )}
 

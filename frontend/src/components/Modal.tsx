@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Icon } from "./ui";
 
 interface Props {
   title: string;
@@ -15,6 +16,12 @@ export default function Modal({ title, onClose, children, wide }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const close = (
+    <button type="button" onClick={onClose} aria-label="Close" title="Close (Esc)" className="icon-btn -mr-1.5">
+      <Icon name="x" />
+    </button>
+  );
+
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[2px]"
@@ -24,27 +31,13 @@ export default function Modal({ title, onClose, children, wide }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full ${wide ? "flex max-w-4xl flex-col overflow-hidden p-0" : "max-w-md p-6"} max-h-[90vh] animate-scale-in rounded-xl bg-surface shadow-pop`}
+        className={`flex w-full flex-col overflow-hidden ${wide ? "max-w-4xl" : "max-w-md"} max-h-[90vh] animate-scale-in rounded-2xl border border-slate-200 bg-surface shadow-pop`}
       >
-        {wide ? (
-          <>
-            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-6 py-3">
-              <h2 className="min-w-0 truncate text-lg font-semibold">{title}</h2>
-              <button
-                onClick={onClose}
-                className="btn-danger shrink-0 px-3 py-1.5"
-              >
-                Close
-              </button>
-            </div>
-            <div className="overflow-y-auto p-6">{children}</div>
-          </>
-        ) : (
-          <>
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <div className="mt-4">{children}</div>
-          </>
-        )}
+        <div className={`flex shrink-0 items-center justify-between gap-4 px-6 ${wide ? "border-b border-slate-200 py-3" : "pb-1 pt-5"}`}>
+          <h2 className="min-w-0 truncate text-lg font-semibold tracking-tight">{title}</h2>
+          {close}
+        </div>
+        <div className={`min-h-0 overflow-y-auto ${wide ? "p-6" : "px-6 pb-6 pt-3"}`}>{children}</div>
       </div>
     </div>,
     document.body,

@@ -69,9 +69,11 @@ backend/app/
   citations.py  providers/{llm,embeddings}.py  settings_service.py  crypto.py
 backend/tests/ ...   backend/eval/ (retrieval eval dataset + script)
 frontend/src/
-  pages/ ProjectsPage, ProjectWorkspace (tabs: Overview | Files | Chat), SettingsPage
-  components/ chat/* explorer/* viewer/{FloatingFileViewer,CodeRenderer,MarkdownRenderer,
-              PdfRenderer,DocxRenderer,TableRenderer,TextRenderer} Splash GlobalIngestionIndicator
+  pages/ LoginPage, ProjectsPage, ProjectWorkspace (tabs: Dashboard | Map | Files | Search | Chat | Access), SettingsPage
+  components/ ui.tsx (icons, Menu, Monogram, FileIcon, Badge…) Layout Modal chat/* explorer/* access/*
+              viewer/{FloatingFileViewer,CodeRenderer,MarkdownRenderer,PdfRenderer,DocxRenderer,
+              TableRenderer,TextRenderer,SelectionAsk,SelectionAnswer} Splash GlobalIngestionIndicator
+  index.css (colour tokens, shared classes; see Frontend-Design.md)  auth/AuthContext
   api/ (typed client + SSE reader)  lib/ignore.ts (filters using rules fetched from GET /upload-rules)
 docker-compose.yml (postgres + elasticsearch)   backend/alembic/ (migrations)
 data/ (gitignored: uploaded files under data/projects/{project_id}/..., secret.key)
@@ -126,14 +128,20 @@ ES documents: `_id = chunk_id`, `{project_id, file_id, file_path, file_type, con
 
 ## Frontend
 
-- **Projects page**: cards showing name, file count and last updated, plus create/rename/delete with a confirmation.
-- **Workspace header**: project name and status.
-- **Overview tab**: stats plus a language bar.
-- **Files tab**: collapsible tree, path/filename search (2+ characters, case-insensitive), status badges, and a failed-file popover with Retry/Replace. Upload/Re-upload uses `<input webkitdirectory>` and filters on the client before sending, using the rules fetched from `GET /upload-rules` (no copy of the rules lives in the frontend). The button is disabled while ingestion runs.
+Visual rules (colour tokens, shared components, layout, cursors) are in [Frontend-Design.md](Frontend-Design.md). The tabs below grew from the original Overview / Files / Chat to Dashboard, Map, Files, Search, Chat and Access (admins only); updated 2026-11-08.
+
+- **Header**: breadcrumbs (DevDocs › Projects › project), server status, theme toggle and an account menu (name, role, **Settings** for admins, **Sign out**). Settings is reached only from this menu.
+- **Projects page**: cards showing coloured initials, name, status, description, file count and last updated; create from the page, rename/delete from each card's "⋯" menu with a confirmation.
+- **Workspace sidebar**: project initials, name and status, the tabs, last updated, and a button that folds the sidebar to an icon rail (folded by default on Chat).
+- **Dashboard tab** (replaced Overview): counts, language breakdown, detected stack, README excerpt, entry points, largest files and configuration (environment variables), computed without AI calls.
+- **Map tab**: folder-level import graph with drill-down into a folder's files and an impact panel.
+- **Search tab**: keyword search over content, paths and names, plus a symbol index.
+- **Access tab** (admins): People, By folder, By person (with "Preview app as"), Matrix and Audit log.
+- **Files tab**: collapsible tree with file-type icons, path/filename search (2+ characters, case-insensitive), drag-and-drop upload, status (a green dot for Ready, a badge otherwise), and a failed-file popover with Retry/Replace. Upload/Re-upload uses `<input webkitdirectory>` and filters on the client before sending, using the rules fetched from `GET /upload-rules` (no copy of the rules lives in the frontend). The button is disabled while ingestion runs.
 - **Floating file viewer**: a modal that picks a renderer by file type. The code renderer scrolls to the first cited range and highlights every cited range.
 - **Chat**: sidebar with New Chat (temporary state, nothing persisted) and switch/delete (with confirmation; deleting the open chat opens the most recent remaining one, or the blank state). The composer validates input (non-empty, ≤ 8,000 characters) and is disabled while generating. While waiting it shows rotating cosmetic loading phrases, then streams Markdown. Stop shows "[Stopped] [Retry] [Cancel]", which is rebuilt from `gen_state` when the user returns to the chat. Sources are listed at the end, and clicking one opens the viewer. Chat is disabled when no files are ready, with the spec's exact empty/failed messages and the generic error "Couldn't generate a response. Please try again."
-- **Global**: a ~2–3 s logo splash with fade, plus a global ingestion indicator that polls `/ingestion/active` and shows a project-name tooltip.
-- **Settings page**: LLM / Embeddings / Reranker (Jev fields appear only when Jev is selected) / Advanced RAG, with Test Connection, Save, and unsaved changes discarded on leave.
+- **Global**: a short logo splash (about 0.9 s, once per browser session; the original spec said 2–3 s on every load), plus a global ingestion indicator that polls `/ingestion/active` and shows a project-name tooltip.
+- **Settings page** (admins only): General (developer mode) / LLM / Embeddings / Reranker (Jev fields appear only when Jev is selected) / Advanced RAG, with a sticky section index, Test Connection, Save, and unsaved changes discarded on leave.
 
 ## Implementation Phases
 

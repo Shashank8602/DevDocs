@@ -21,7 +21,7 @@ export default function ChunkInspector({ projectId, file, onClose }: { projectId
           </p>
           <ol className="space-y-3">
             {chunks.map((c) => (
-              <li key={c.id} className="rounded-md border border-slate-200">
+              <li key={c.id} className="overflow-hidden rounded-lg border border-slate-200">
                 <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
                   <span className="font-medium">#{c.ordinal}</span>
                   {c.line_start != null && <span>lines {c.line_start}–{c.line_end}</span>}
@@ -29,7 +29,7 @@ export default function ChunkInspector({ projectId, file, onClose }: { projectId
                   {c.section && <span className="min-w-0 max-w-full truncate" title={c.section}>section: {c.section}</span>}
                   <span>{c.token_count} tokens</span>
                 </div>
-                <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words p-3 text-xs">{c.content}</pre>
+                <pre className="selectable-text max-h-48 overflow-auto whitespace-pre-wrap break-words p-3 text-xs">{c.content}</pre>
               </li>
             ))}
           </ol>

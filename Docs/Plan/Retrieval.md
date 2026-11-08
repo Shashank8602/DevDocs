@@ -6,7 +6,7 @@ How a question becomes the final context, how the gate and the filter were chose
 
 | Step | Where | Notes |
 |---|---|---|
-| Eligible set | `pipeline.run` | `project_id` + Postgres READY file ids; never from the client. No READY file → no ES or embedding call. |
+| Eligible set | `pipeline.run` | `project_id` + Postgres READY file ids **that the asker may read** (`access.readable_file_ids(viewer, …)`; `viewer` is a required argument); never from the client. No readable READY file → no ES or embedding call. |
 | Query | `query.py` | A follow-up with a reference word (it, that, this, …) gets the previous question prepended; a standalone question is unchanged. BM25 receives the question with stopwords stripped. |
 | BM25 + kNN | `bm25.py`, `vector.py` | Top-10 each, concurrently, isolation filter inside the query. BM25 matches the terms on `content`, `path_text` and `section`. ES errors retried twice (connection, 429, 502–504) then `RetrievalError`. |
 | RRF (k=60) + test-file prior | `fusion.py` | In application code; chunks of test files then get ×0.8 unless the question mentions tests. Each candidate keeps its BM25 rank and its vector similarity. Candidates are joined to Postgres chunks of READY files, so a stray ES doc never gets through. |

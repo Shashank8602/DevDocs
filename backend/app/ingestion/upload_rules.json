@@ -1,5 +1,6 @@
 {
-  "ignored_names": [".git", "node_modules", "venv", ".venv", "__pycache__", "dist", "build", "target", "coverage", ".env", "package-lock.json", "pnpm-lock.yaml"],
+  "ignored_names": [".git", "node_modules", "venv", ".venv", "__pycache__", "dist", "build", "target", "coverage", ".env", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "poetry.lock", "Cargo.lock", "Gemfile.lock", "composer.lock", "Pipfile.lock", "go.sum", "uv.lock", "bun.lockb", "npm-shrinkwrap.json", ".next", ".nuxt", ".turbo", ".gradle", ".idea", ".vscode", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".cache", ".svn", ".hg"],
+  "ignored_suffixes": [".min.js", ".min.css", ".bundle.js", ".chunk.js", ".js.map", ".css.map", ".lock"],
   "max_file_bytes": 20971520,
   "max_total_bytes": 52428800,
   "extensions": {

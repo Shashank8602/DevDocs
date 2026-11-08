@@ -14,7 +14,7 @@ export default function DocxRenderer({ data }: { data: ArrayBuffer }) {
   if (html === null) return <p className="p-4 text-sm text-slate-500">Loading…</p>;
   return (
     <div
-      className="space-y-3 p-5 text-sm leading-6 text-slate-800 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:text-xl [&_h2]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_table]:border-collapse [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_ul]:list-disc"
+      className="prose-dd selectable-text mx-auto max-w-3xl px-6 py-5 text-sm leading-6"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

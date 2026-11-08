@@ -26,6 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.access import SYSTEM_ADMIN
 from app.config import settings
 from app.db import SessionLocal
 from app.providers.embeddings import EmbeddingError, get_embedding_provider, set_embedding_provider
@@ -118,19 +119,19 @@ async def main() -> int:
 
     rows = []
     async with SessionLocal() as session:
-        await pipeline.run(session, pid, questions[0]["q"])  # warm connections and the ONNX model; not measured
+        await pipeline.run(session, pid, questions[0]["q"], viewer=SYSTEM_ADMIN)  # warm connections and the ONNX model; not measured
         timed.durations.clear(), timed.sizes.clear()
         # 2. production pass: settings as configured, reranker off. Measures search + Postgres time.
         prod = {}
         for q in questions:
             start = time.perf_counter()
-            trace = await pipeline.run(session, pid, q["q"])
+            trace = await pipeline.run(session, pid, q["q"], viewer=SYSTEM_ADMIN)
             prod[q["q"]] = (1000 * (time.perf_counter() - start), trace)
         # 3. record pass: gate and filter off, reranker on every candidate (for the old pipeline and the replay)
         for i, q in enumerate(questions, 1):
             before = len(timed.durations)
             trace = await pipeline.run(
-                session, pid, q["q"], gate_threshold=-math.inf, relative_cutoff=0, rerank_top_n=10 ** 6,
+                session, pid, q["q"], viewer=SYSTEM_ADMIN, gate_threshold=-math.inf, relative_cutoff=0, rerank_top_n=10 ** 6,
             )
             rerank_ms = 1000 * sum(timed.durations[before:])
             cands = by_rrf([c for c in trace.candidates if _norm(c.file_path, prefix) not in exclude])

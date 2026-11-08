@@ -16,7 +16,7 @@ All diagrams are [Mermaid](https://mermaid.js.org/), derived from [DevDocs-V1-Im
 | 10 | [Settings & re-index](10-settings-and-reindex.md) | flowchart + sequence | Embedding fingerprint change and re-index |
 | 11 | [Status lifecycle](11-file-status-lifecycle.md) | state | File and project statuses |
 | 12 | [Change detection](12-change-detection.md) | flowchart | The 5 diff rules and worked example |
-| 13 | [Frontend structure](13-frontend-structure.md) | flowchart + state | Pages, viewer renderers, chat states |
+| 13 | [Frontend structure](13-frontend-structure.md) | flowchart + state | Header and account menu, six workspace tabs, viewer renderers, chat states |
 | 14 | [Phase roadmap](14-phase-roadmap.md) | flowchart + gantt | Phases 0–12, dev tools, spec coverage |
 
 When the plan changes, update the matching diagram in the same edit.

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 ProjectName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 ProjectDescription = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
@@ -31,6 +31,9 @@ class ProjectOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_ingested_at: datetime | None
+    # set while ingestion waits for the embedding quota: nothing failed, it resumes by itself at this time
+    paused_until: datetime | None = None
+    paused_daily_quota: bool = False
 
 
 class FileOut(BaseModel):
@@ -50,6 +53,7 @@ class UploadResultItem(BaseModel):
     path: str
     status: str  # accepted | rejected
     reason: str | None = None
+    detail: str | None = None  # e.g. what kind of credential a skipped file contained
 
 
 class UploadReport(BaseModel):
@@ -97,12 +101,29 @@ class ActiveIngestion(BaseModel):
     project_name: str
     remaining: int  # files still pending or processing
     total: int
+    paused_until: datetime | None = None
 
 
 # --- chat (Phase 7) ---
+class Selection(BaseModel):
+    """Lines the person selected in the file viewer. Only the position is trusted: the server re-checks that the
+    person may read the file and reads the lines itself."""
+    file_id: uuid.UUID
+    line_start: Annotated[int, Field(ge=1)]
+    line_end: Annotated[int, Field(ge=1)]
+
+
 class ChatRequest(BaseModel):
     """One question. Validation: not empty or whitespace-only, at most 8,000 characters."""
     content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=8000)]
+    selection: Selection | None = None  # "ask about these lines": pinned into the context ahead of retrieval
+
+
+class FileAskRequest(BaseModel):
+    """A question about lines of one file, answered in the file viewer and not saved anywhere."""
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+    line_start: Annotated[int, Field(ge=1)]
+    line_end: Annotated[int, Field(ge=1)]
 
 
 class ConversationOut(BaseModel):

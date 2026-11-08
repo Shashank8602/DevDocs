@@ -123,7 +123,7 @@ Methodology, negative results and caveats: [Docs/Reports/Retrieval-Optimisation-
 
 ### Prerequisites
 
-- Git, Docker Desktop (or Docker Engine with Compose), Python 3.11+, Node.js 18+
+- Git, Docker Desktop (or Docker Engine with Compose), Python 3.11+, Node.js 22+ (the frontend tests need it)
 - An API key for the chat LLM provider and one for the embedding provider (see the Tech stack table)
 - About 3 GB of free RAM for Elasticsearch
 

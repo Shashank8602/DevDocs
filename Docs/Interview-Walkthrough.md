@@ -1039,7 +1039,7 @@ I had said retrieval took "about 0.1 s". Measured end to end, **1,062 ms of the 
 - **End-to-end smoke script** (`scripts/e2e_smoke.py`) against a real server, a throwaway database, real Elasticsearch, real Gemini and Groq: 46 of 47 checks passed. The one failure was an over-strict assertion in the script, since fixed.
 - **Retrieval quality:** `python -m eval.run` and `python -m eval.holdout` ([section 21](#21-measuring-quality-the-evaluation)).
 
-**CI:** GitHub Actions (`.github/workflows/ci.yml`) runs the backend tests with Postgres + Elasticsearch services, and the frontend build + Vitest.
+**CI:** GitHub Actions (`.github/workflows/ci.yml`) runs the backend tests with Postgres + Elasticsearch services, and the frontend build + Vitest on Node 22 (jsdom needs it). CI has no `.env`, so tests set what they need themselves (developer mode, fake AI providers) and never depend on a developer's local keys.
 
 **Running locally:**
 ```

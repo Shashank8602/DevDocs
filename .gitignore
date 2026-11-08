@@ -38,3 +38,6 @@ Thumbs.db
 
 # --- Claude Code local state ---
 .claude/
+
+# --- Private planning notes (kept locally, not published) ---
+Docs/gaps.md

@@ -96,7 +96,7 @@ Design decisions backed by measurement:
 
 Measured end to end on a laptop against the live providers (single runs; provider latency varies by about a second).
 
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+|                                             |                                                                                                         |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Retrieval (query embedding, search, fusion) | 0.5–0.8 s, and tens of milliseconds for a repeated question                                             |
 | First token                                 | about 1 s on the smaller model, 1.5–3.5 s on the larger one                                             |
